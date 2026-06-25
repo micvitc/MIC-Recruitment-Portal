@@ -28,7 +28,7 @@ const NavBar = () => {
                 className="flex justify-between items-center gap-2"
             >
                 <Image
-                    src="/assets/images/mic-logo.jpg"
+                    src="/mic-logo.png"
                     alt="mic-logo"
                     height={imgSize}
                     width={imgSize}

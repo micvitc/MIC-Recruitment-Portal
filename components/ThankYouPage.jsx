@@ -21,7 +21,7 @@ const ThankYouPage = () => {
                 <div className="sticky top-0 z-50 backdrop-blur-sm border flex justify-between items-center p-5">
                     <div className="flex justify-between items-center gap-2">
                         <Image
-                            src="/assets/images/mic-logo.jpg"
+                            src="/mic-logo.png"
                             alt="mic-logo"
                             height={40}
                             width={40}
