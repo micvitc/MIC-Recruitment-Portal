@@ -1,0 +1,69 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    :root {
+        --background: 0 0% 98%; /* Softer white */
+        --foreground: 240 10% 20%; /* Softer dark grey */
+        --card: 0 0% 98%; /* Softer white */
+        --card-foreground: 240 10% 20%; /* Softer dark grey */
+        --popover: 0 0% 98%; /* Softer white */
+        --popover-foreground: 240 10% 20%; /* Softer dark grey */
+        --primary: 240 6% 20%; /* Darker and softer blue-grey */
+        --primary-foreground: 0 0% 98%; /* Light grey */
+        --secondary: 240 4.8% 85%; /* Softer light grey */
+        --secondary-foreground: 240 6% 20%; /* Darker blue-grey */
+        --muted: 240 4.8% 85%; /* Softer light grey */
+        --muted-foreground: 240 3.8% 36%; /* Softer mid-grey */
+        --accent: 240 4.8% 85%; /* Softer light grey */
+        --accent-foreground: 240 6% 20%; /* Darker blue-grey */
+        --destructive: 0 70% 60%; /* Softer red */
+        --destructive-foreground: 0 0% 98%; /* Light grey */
+        --border: 240 4.8% 80%; /* Light grey for borders */
+        --input: 240 4.8% 80%; /* Light grey for inputs */
+        --ring: 240 6% 20%; /* Darker and softer blue-grey */
+        --radius: 0.5rem;
+        --chart-1: 12 60% 50%; /* Softer and more muted orange */
+        --chart-2: 173 50% 45%; /* Softer and more muted green */
+        --chart-3: 197 30% 30%; /* Softer and more muted blue */
+        --chart-4: 43 60% 55%; /* Softer and more muted yellow */
+        --chart-5: 27 70% 55%; /* Softer and more muted orange-red */
+    }
+
+    .dark {
+        --background: 240 10% 3.9%;
+        --foreground: 0 0% 98%;
+        --card: 240 10% 3.9%;
+        --card-foreground: 0 0% 98%;
+        --popover: 240 10% 3.9%;
+        --popover-foreground: 0 0% 98%;
+        --primary: 0 0% 98%;
+        --primary-foreground: 240 5.9% 10%;
+        --secondary: 240 3.7% 15.9%;
+        --secondary-foreground: 0 0% 98%;
+        --muted: 240 3.7% 15.9%;
+        --muted-foreground: 240 5% 64.9%;
+        --accent: 240 3.7% 15.9%;
+        --accent-foreground: 0 0% 98%;
+        --destructive: 0 62.8% 30.6%;
+        --destructive-foreground: 0 0% 98%;
+        --border: 240 3.7% 15.9%;
+        --input: 240 3.7% 15.9%;
+        --ring: 240 4.9% 83.9%;
+        --chart-1: 220 70% 50%;
+        --chart-2: 160 60% 45%;
+        --chart-3: 30 80% 55%;
+        --chart-4: 280 65% 60%;
+        --chart-5: 340 75% 55%;
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+    body {
+        @apply bg-background text-foreground;
+    }
+}
