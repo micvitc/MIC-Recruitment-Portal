@@ -45,15 +45,3 @@ next-env.d.ts
 
 scripts/load/
 config.bat
-
-certificates
-
-# course imports
-src/data/import_courses.ts
-src/data/import_25bec.ts
-src/data/parse_vtop_html.ts
-src/data/vtop_table.html
-src/data/output_chennai_original.json
-new_courses.json
-
-src/scripts
