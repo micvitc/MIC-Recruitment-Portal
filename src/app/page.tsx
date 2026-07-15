@@ -49,6 +49,7 @@ export default function RegistrationPage() {
 
   const [captchaLogs, setCaptchaLogs] = useState<string[]>([]);
   const turnstileWidgetId = useRef<string | null>(null);
+  const turnstileContainerRef = useRef<HTMLDivElement>(null);
 
   const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "1x00000000000000000000AA";
 
@@ -118,9 +119,9 @@ export default function RegistrationPage() {
     }
 
     const renderWidget = () => {
-      if (window.turnstile) {
+      if (window.turnstile && turnstileContainerRef.current) {
         try {
-          const widgetId = window.turnstile.render("#turnstile-container", {
+          const widgetId = window.turnstile.render(turnstileContainerRef.current, {
             sitekey: turnstileSiteKey,
             callback: (token: string) => {
               setCaptchaToken(token);
@@ -599,7 +600,7 @@ export default function RegistrationPage() {
                   Completing Cloudflare Turnstile Challenge
                 </label>
                 <div className="min-h-[65px] flex items-center justify-center">
-                  <div id="turnstile-container" className="mx-auto"></div>
+                  <div ref={turnstileContainerRef} className="mx-auto"></div>
                 </div>
               </div>
 
