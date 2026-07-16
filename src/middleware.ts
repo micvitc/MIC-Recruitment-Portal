@@ -40,7 +40,7 @@ const { auth } = NextAuth(authConfig);
 
 const ARCJET_KEY = process.env.ARCJET_KEY;
 
-let aj: any = null;
+let aj: ReturnType<typeof arcjet> | null = null;
 
 if (ARCJET_KEY) {
   aj = arcjet({
@@ -167,7 +167,7 @@ export default auth(async (req: NextAuthRequest) => {
       const cost = getTokenCost(method, pathname);
       const decision = await aj.protect(req as unknown as Request, {
         requested: cost,
-      });
+      } as unknown as { correlationId?: string; requested?: number });
 
       if (decision.isDenied()) {
         if (decision.reason.isRateLimit()) {
