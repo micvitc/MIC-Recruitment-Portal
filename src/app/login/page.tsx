@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Press_Start_2P } from "next/font/google";
+import TurnstileWidget from "@/components/TurnstileWidget";
 
 const pressStart = Press_Start_2P({
   weight: "400",
@@ -11,15 +12,7 @@ const pressStart = Press_Start_2P({
   variable: "--font-press-start-2p",
 });
 
-declare global {
-  interface Window {
-    turnstile?: {
-      render: (container: string | HTMLElement, options: any) => string;
-      remove: (widgetId: string) => void;
-      reset: (widgetId: string) => void;
-    };
-  }
-}
+
 
 function RetroPipe({ height, top, left, isTop }: { height: number; top: string; left: string; isTop: boolean }) {
   return (
@@ -41,12 +34,10 @@ function RetroPipe({ height, top, left, isTop }: { height: number; top: string; 
 export default function LoginPage() {
   const router = useRouter();
   const [scale, setScale] = useState(1);
-  const [captchaPassed, setCaptchaPassed] = useState(false);
+  // Store the actual Turnstile token — not just a boolean flag
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const [isSigningIn, setIsSigningIn] = useState(false);
-  
-  const turnstileContainerRef = useRef<HTMLDivElement>(null);
-  const turnstileWidgetId = useRef<string | null>(null);
-  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || "1x00000000000000000000AA";
+  const [captchaError, setCaptchaError] = useState(false);
 
   // Scale background to fit
   useEffect(() => {
@@ -62,63 +53,34 @@ export default function LoginPage() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  // Turnstile logic
-  useEffect(() => {
-    const scriptId = "cloudflare-turnstile-script";
-    let script = document.getElementById(scriptId) as HTMLScriptElement;
+  // No manual Turnstile script setup needed — TurnstileWidget handles it
 
-    if (!script) {
-      script = document.createElement("script");
-      script.id = scriptId;
-      script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
-      script.async = true;
-      script.defer = true;
-      document.head.appendChild(script);
-    }
-
-    const renderWidget = () => {
-      if (window.turnstile && turnstileContainerRef.current) {
-        try {
-          const widgetId = window.turnstile.render(turnstileContainerRef.current, {
-            sitekey: turnstileSiteKey,
-            callback: (token: string) => {
-              setCaptchaPassed(true);
-            },
-            "error-callback": () => {
-              setCaptchaPassed(false);
-            },
-            "expired-callback": () => {
-              setCaptchaPassed(false);
-            },
-            theme: "light",
-          });
-          turnstileWidgetId.current = widgetId;
-        } catch (err) {
-          console.error("Turnstile render error:", err);
-        }
-      }
-    };
-
-    if (window.turnstile) {
-      renderWidget();
-    } else {
-      script.onload = renderWidget;
-    }
-
-    return () => {
-      if (window.turnstile && turnstileWidgetId.current) {
-        try {
-          window.turnstile.remove(turnstileWidgetId.current);
-        } catch (err) {}
-      }
-    };
-  }, [turnstileSiteKey]);
-
-  const handleSignIn = () => {
-    if (!captchaPassed) return;
+  const handleSignIn = async () => {
+    if (!turnstileToken) return;
     setIsSigningIn(true);
-    // Since NextAuth callbackUrl needs to be absolute or relative, use /recruitments
-    signIn("google", { callbackUrl: "/recruitments" });
+    setCaptchaError(false);
+
+    try {
+      // Verify the Turnstile token server-side before triggering Google OAuth
+      const verifyRes = await fetch("/api/turnstile/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: turnstileToken }),
+      });
+      const verifyData = await verifyRes.json();
+
+      if (!verifyData.success) {
+        setCaptchaError(true);
+        setTurnstileToken(null);
+        setIsSigningIn(false);
+        return;
+      }
+
+      signIn("google", { callbackUrl: "/recruitments" });
+    } catch {
+      setCaptchaError(true);
+      setIsSigningIn(false);
+    }
   };
 
   const playRetroSound = () => {
@@ -228,13 +190,13 @@ export default function LoginPage() {
 
             <button
               onClick={() => { playRetroSound(); handleSignIn(); }}
-              disabled={!captchaPassed || isSigningIn}
+              disabled={!turnstileToken || isSigningIn}
               className={`w-full border-4 border-black py-4 px-4 text-[10px] font-bold tracking-widest transition-transform flex items-center justify-center gap-3 ${
-                !captchaPassed 
+                !turnstileToken
                   ? "bg-slate-300 text-slate-500 cursor-not-allowed opacity-80"
                   : "bg-white hover:bg-slate-100 text-black active:translate-y-1 cursor-pointer"
               }`}
-              style={{ boxShadow: captchaPassed ? "4px 4px 0px 0px #000" : "none" }}
+              style={{ boxShadow: turnstileToken ? "4px 4px 0px 0px #000" : "none" }}
             >
               {isSigningIn ? (
                 <span className="animate-retro-blink">LOADING...</span>
@@ -251,9 +213,21 @@ export default function LoginPage() {
               )}
             </button>
 
-            <div className="w-full h-[65px] bg-white border-4 border-black flex items-center justify-center" style={{ boxShadow: "inset 2px 2px 0px 0px rgba(0,0,0,0.1)" }}>
-               <div ref={turnstileContainerRef} className="mx-auto transform scale-90 origin-center" />
+            {/* Cloudflare Turnstile — token verified server-side before sign-in */}
+            <div className="w-full bg-white border-4 border-black flex items-center justify-center py-2" style={{ boxShadow: "inset 2px 2px 0px 0px rgba(0,0,0,0.1)" }}>
+              <TurnstileWidget
+                onSuccess={(token) => { setTurnstileToken(token); setCaptchaError(false); }}
+                onError={() => { setTurnstileToken(null); setCaptchaError(true); }}
+                onExpire={() => { setTurnstileToken(null); }}
+                theme="light"
+                className="mx-auto"
+              />
             </div>
+            {captchaError && (
+              <p className="text-[8px] text-red-600 font-bold uppercase text-center tracking-widest">
+                ⚠ CAPTCHA FAILED — PLEASE RETRY
+              </p>
+            )}
 
             <div className="w-full text-center mt-2">
               <span className="text-[8px] md:text-[9px] text-[#A93710] font-bold uppercase tracking-widest leading-loose block">

@@ -48,7 +48,10 @@ export const authConfig = {
       return session;
     },
   },
-  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
+  // Use only AUTH_SECRET — do NOT add a fallback here. Having two possible
+  // secret sources is a footgun; if one leaks the other silently takes over.
+  // Generate with: openssl rand -base64 32
+  secret: process.env.AUTH_SECRET,
   pages: {
     error: "/auth/error", // Custom error page for blocked sign-ins
   },
