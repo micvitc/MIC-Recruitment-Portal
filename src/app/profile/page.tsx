@@ -94,7 +94,7 @@ function ProfilePage() {
               ERROR: NO APPLICATION
             </div>
             <FileText className="h-16 w-16 text-black mx-auto" />
-            <p className="text-[12px] leading-loose text-black uppercase tracking-wide">You haven't applied to any departments yet.</p>
+            <p className="text-[12px] leading-loose text-black uppercase tracking-wide">You haven&apos;t applied to any departments yet.</p>
             <button
               onClick={() => router.push("/recruitments")}
               className="mt-4 px-6 py-4 bg-[#1093EB] hover:bg-[#16B6F4] text-white border-4 border-black font-bold text-[12px] uppercase tracking-widest transition-transform hover:-translate-y-1 active:translate-y-0 w-full"

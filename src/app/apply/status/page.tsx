@@ -166,7 +166,7 @@ function StageTimeline({
                   </p>
                 )}
                 {submission?.adminNote && (
-                  <p className="text-[11px] text-slate-400 mt-1 italic">"{submission.adminNote}"</p>
+                  <p className="text-[11px] text-slate-400 mt-1 italic">&ldquo;{submission.adminNote}&rdquo;</p>
                 )}
               </div>
             </div>
@@ -225,7 +225,7 @@ export default function ApplicationStatusPage() {
         <div className="max-w-sm w-full text-center space-y-6">
           <AlertTriangle className="h-12 w-12 text-amber-400 mx-auto" />
           <h1 className="text-xl font-bold text-white">No Application Found</h1>
-          <p className="text-slate-400 text-sm">You haven't started an application yet.</p>
+          <p className="text-slate-400 text-sm">You haven&apos;t started an application yet.</p>
           <button
             onClick={() => router.push("/apply")}
             className="w-full py-3 rounded-xl bg-gradient-to-r from-teal-500 to-cyan-500 text-slate-950 font-bold text-sm hover:brightness-110 transition-all"
@@ -268,7 +268,7 @@ export default function ApplicationStatusPage() {
             <Award className="h-10 w-10 text-emerald-400 shrink-0" />
             <div>
               <p className="text-lg font-extrabold text-white">Congratulations! 🎉</p>
-              <p className="text-sm text-emerald-300 mt-0.5">You've been selected for MIC. Check your email for next steps.</p>
+              <p className="text-sm text-emerald-300 mt-0.5">You&apos;ve been selected for MIC. Check your email for next steps.</p>
             </div>
           </div>
         )}
@@ -355,7 +355,7 @@ export default function ApplicationStatusPage() {
             />
           ) : (
             <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-900/20 p-6 flex flex-col items-center justify-center text-center space-y-3">
-              <p className="text-sm text-slate-400">You haven't selected a 2nd Preference yet.</p>
+              <p className="text-sm text-slate-400">You haven&apos;t selected a 2nd Preference yet.</p>
               <button
                 onClick={() => router.push("/recruitments")}
                 className="px-4 py-2 rounded-lg bg-slate-800 text-slate-300 font-semibold text-xs hover:bg-slate-700 transition-colors"

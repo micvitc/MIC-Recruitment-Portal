@@ -14,6 +14,30 @@ const pressStart = Press_Start_2P({
   variable: "--font-press-start-2p",
 });
 
+interface StageSubmission {
+  stage: number;
+  submittedAt: string;
+  result: "pending" | "passed" | "failed";
+  responses: Record<string, unknown>;
+}
+
+interface ApplicationStatus {
+  overallStatus: "in-progress" | "selected" | "rejected" | "waitlisted";
+  firstPreference: string;
+  secondPreference?: string;
+  firstPrefProgress: {
+    status: "active" | "passed" | "rejected" | "pending";
+    currentStage: number;
+    stages: StageSubmission[];
+  };
+  secondPrefProgress?: {
+    status: "active" | "passed" | "rejected" | "pending";
+    currentStage: number;
+    stages: StageSubmission[];
+  };
+}
+
+
 function RetroPipe({ height, top, left, isTop }: { height: number; top: string; left: string; isTop: boolean }) {
   return (
     <img
@@ -333,8 +357,8 @@ export default function StagePage({
           fetch("/api/apply/status"),
         ]);
 
-        let userData: any = null;
-        let appData: any = null;
+        let userData: Record<string, unknown> | null = null;
+        let appData: ApplicationStatus | null = null;
         let fetchedStageConfig: StageConfig | null = null;
         let hasSubmission = false;
 
@@ -367,11 +391,11 @@ export default function StagePage({
 
         // Auto-fill logic
         if (!hasSubmission && fetchedStageConfig) {
-          const initialResponses: Record<string, any> = {};
+          const initialResponses: Record<string, unknown> = {};
 
           // 1. If applying for second preference Stage 1, pull from first preference Stage 1
           if (stageNum === 1 && appData && appData.secondPreference === dept) {
-            const firstPrefStage1 = appData.firstPrefProgress?.stages?.find((s: any) => s.stage === 1);
+            const firstPrefStage1 = appData.firstPrefProgress?.stages?.find((s: StageSubmission) => s.stage === 1);
             if (firstPrefStage1 && firstPrefStage1.responses) {
               Object.assign(initialResponses, firstPrefStage1.responses);
             }
@@ -468,7 +492,9 @@ export default function StagePage({
   const playRetroSound = () => {
     if (typeof window === "undefined") return;
     try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioContextClass) return;
+      const ctx = new AudioContextClass();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.connect(gain);

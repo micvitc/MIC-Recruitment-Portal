@@ -22,7 +22,9 @@ export default function FaqsPage() {
   const playRetroSound = (type: "select" | "jump" | "open" | "close") => {
     if (typeof window === "undefined") return;
     try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioContextClass) return;
+      const ctx = new AudioContextClass();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.connect(gain);

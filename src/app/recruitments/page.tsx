@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Press_Start_2P } from "next/font/google";
 import DepartmentPopup, { DepartmentData } from "@/components/DepartmentPopup";
@@ -124,6 +124,89 @@ function NormalArrow({ top, left, width = 50, height = 30 }: { top: string; left
     </div>
   );
 }
+interface StageProgress {
+  stage: number;
+  result: "pending" | "passed" | "failed";
+  submittedAt: string;
+  adminNote?: string;
+  responses: Record<string, unknown>;
+}
+
+interface ApplicationStatus {
+  overallStatus: "in-progress" | "selected" | "rejected" | "waitlisted";
+  firstPreference: string;
+  firstPrefType: "tech" | "non-tech";
+  secondPreference?: string;
+  secondPrefType?: "tech" | "non-tech";
+  firstPrefProgress: {
+    status: "active" | "passed" | "rejected" | "pending";
+    currentStage: number;
+    stages: StageProgress[];
+  };
+  secondPrefProgress: {
+    status: "active" | "passed" | "rejected" | "pending";
+    currentStage: number;
+    stages: StageProgress[];
+  };
+}
+
+function playRetroSound(type: "select" | "jump" | "open" | "close" | "die") {
+  if (typeof window === "undefined") return;
+  try {
+    const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    if (type === "jump") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(400, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.1, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.15);
+    } else if (type === "select") {
+      osc.type = "square";
+      osc.frequency.setValueAtTime(600, ctx.currentTime);
+      osc.frequency.setValueAtTime(900, ctx.currentTime + 0.08);
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.2);
+    } else if (type === "open") {
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(300, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(600, ctx.currentTime + 0.2);
+      gain.gain.setValueAtTime(0.05, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.25);
+    } else if (type === "close") {
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(600, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.2);
+      gain.gain.setValueAtTime(0.05, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.25);
+    } else if (type === "die") {
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(150, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.4);
+      gain.gain.setValueAtTime(0.1, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.4);
+    }
+  } catch (e) {
+    console.warn("Audio Context failed", e);
+  }
+}
+
 
 export default function RecruitmentsPage() {
   const router = useRouter();
@@ -143,7 +226,7 @@ export default function RecruitmentsPage() {
   const [isScrollingLeft, setIsScrollingLeft] = useState(false);
 
   // Application State
-  const [appStatus, setAppStatus] = useState<any>(null);
+  const [appStatus, setAppStatus] = useState<ApplicationStatus | null>(null);
   const [isLoadingApp, setIsLoadingApp] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isApplying, setIsApplying] = useState(false);
@@ -185,7 +268,7 @@ export default function RecruitmentsPage() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const fetchStatus = async () => {
+  const fetchStatus = useCallback(async () => {
     setIsLoadingApp(true);
     setError(null);
     try {
@@ -206,12 +289,21 @@ export default function RecruitmentsPage() {
     } finally {
       setIsLoadingApp(false);
     }
-  };
+  }, []);
 
   // Fetch application status
   useEffect(() => {
-    fetchStatus();
-  }, []);
+    let active = true;
+    const init = async () => {
+      if (active) {
+        await fetchStatus();
+      }
+    };
+    init();
+    return () => {
+      active = false;
+    };
+  }, [fetchStatus]);
 
   // Ultra-Smooth GPU Physics Engine for Flappy Bird (native 60/120fps camera follow & jump arcs)
   useEffect(() => {
@@ -229,7 +321,7 @@ export default function RecruitmentsPage() {
         // 2. Vertical Floating Breathing Bob & Flapping Jump Physics
         const baseFloatY = Math.sin(p.time) * 11; // Smooth 11px sine wave hover
         let totalY = baseFloatY + p.currentY;
-        let tiltAngle = Math.max(-25, Math.min(30, p.velocityY * 2));
+        const tiltAngle = Math.max(-25, Math.min(30, p.velocityY * 2));
 
         if (!p.isDead) {
           if (p.velocityY !== 0 || Math.abs(p.currentY) > 0.05) {
@@ -373,60 +465,7 @@ export default function RecruitmentsPage() {
     birdPhysicsRef.current.velocityY = -15; // Smooth instant upward jump arc in GPU physics loop
   };
 
-  const playRetroSound = (type: "select" | "jump" | "open" | "close" | "die") => {
-    if (typeof window === "undefined") return;
-    try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
 
-      if (type === "jump") {
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(400, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.15);
-        gain.gain.setValueAtTime(0.1, ctx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.15);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.15);
-      } else if (type === "select") {
-        osc.type = "square";
-        osc.frequency.setValueAtTime(600, ctx.currentTime);
-        osc.frequency.setValueAtTime(900, ctx.currentTime + 0.08);
-        gain.gain.setValueAtTime(0.08, ctx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.2);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.2);
-      } else if (type === "open") {
-        osc.type = "sawtooth";
-        osc.frequency.setValueAtTime(300, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(600, ctx.currentTime + 0.2);
-        gain.gain.setValueAtTime(0.05, ctx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.25);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.25);
-      } else if (type === "close") {
-        osc.type = "sawtooth";
-        osc.frequency.setValueAtTime(600, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.2);
-        gain.gain.setValueAtTime(0.05, ctx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.25);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.25);
-      } else if (type === "die") {
-        osc.type = "sawtooth";
-        osc.frequency.setValueAtTime(150, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.4);
-        gain.gain.setValueAtTime(0.1, ctx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.4);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.4);
-      }
-    } catch (e) {
-      console.warn("Audio Context failed", e);
-    }
-  };
 
   const techQuests: DepartmentData[] = [
     {
