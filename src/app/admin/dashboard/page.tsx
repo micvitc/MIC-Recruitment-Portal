@@ -111,7 +111,16 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    loadData();
+    let active = true;
+    const init = async () => {
+      if (active) {
+        await loadData();
+      }
+    };
+    init();
+    return () => {
+      active = false;
+    };
   }, []);
 
   const handleToggleCycleConfirm = async () => {

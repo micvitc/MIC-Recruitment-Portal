@@ -132,7 +132,16 @@ export default function AdvancedAnalyticsPage() {
   };
 
   useEffect(() => {
-    loadData();
+    let active = true;
+    const init = async () => {
+      if (active) {
+        await loadData();
+      }
+    };
+    init();
+    return () => {
+      active = false;
+    };
   }, []);
 
   const handleOpenDeptDrawer = async (slug: string) => {

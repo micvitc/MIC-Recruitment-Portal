@@ -50,6 +50,14 @@ interface Application {
   secondPrefProgress: PrefProgress;
   createdAt: string;
 }
+interface ClientDepartment {
+  slug: string;
+  name: string;
+  type: "tech" | "non-tech";
+  totalStages: number;
+  isActive: boolean;
+  maxCapacity: number;
+}
 
 const DEPT_NAMES: Record<string, string> = {
   development: "Development",
@@ -379,8 +387,8 @@ export default function ApplicantDetailPage({
   const { id } = use(params);
   const router = useRouter();
   const [application, setApplication] = useState<Application | null>(null);
-  const [dept1, setDept1] = useState<any>(null);
-  const [dept2, setDept2] = useState<any>(null);
+  const [dept1, setDept1] = useState<ClientDepartment | null>(null);
+  const [dept2, setDept2] = useState<ClientDepartment | null>(null);
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState(false);
   const [message, setMessage] = useState("");
@@ -411,7 +419,16 @@ export default function ApplicantDetailPage({
   };
 
   useEffect(() => {
-    load();
+    let active = true;
+    const init = async () => {
+      if (active) {
+        await load();
+      }
+    };
+    init();
+    return () => {
+      active = false;
+    };
   }, [id]);
 
   const handleActionConfirmTrigger = (
