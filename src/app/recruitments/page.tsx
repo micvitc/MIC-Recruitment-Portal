@@ -6,6 +6,7 @@ import { Press_Start_2P } from "next/font/google";
 import DepartmentPopup, { DepartmentData } from "@/components/DepartmentPopup";
 import { Loader2 } from "lucide-react";
 import posthog from "posthog-js";
+import RetroLoader from "@/components/RetroLoader";
 
 const pressStart = Press_Start_2P({
   weight: "400",
@@ -231,6 +232,12 @@ export default function RecruitmentsPage() {
   const [error, setError] = useState<string | null>(null);
   const [isApplying, setIsApplying] = useState(false);
 
+  // Backend design & dynamic configuration state
+  const [techQuests, setTechQuests] = useState<DepartmentData[]>([]);
+  const [nonTechQuests, setNonTechQuests] = useState<DepartmentData[]>([]);
+  const [pageTitle, setPageTitle] = useState("Recruitments");
+  const [pageSubtitle, setPageSubtitle] = useState("CHOOSE THE QUEST SUITS YOU THE MOST");
+
   const birdPhysicsRef = useRef({
     currentX: 0,
     currentY: 0,
@@ -272,19 +279,29 @@ export default function RecruitmentsPage() {
     setIsLoadingApp(true);
     setError(null);
     try {
-      const res = await fetch(`/api/apply/status?t=${Date.now()}`);
-      if (res.ok) {
-        const data = await res.json();
-        setAppStatus(data.application);
+      const [statusRes, configRes] = await Promise.all([
+        fetch(`/api/apply/status?t=${Date.now()}`),
+        fetch(`/api/pages/recruitments?t=${Date.now()}`)
+      ]);
+
+      if (statusRes.ok && configRes.ok) {
+        const statusData = await statusRes.json();
+        const configData = await configRes.json();
+        
+        setAppStatus(statusData.application);
+        setTechQuests(configData.techQuests || []);
+        setNonTechQuests(configData.nonTechQuests || []);
+        setPageTitle(configData.title || "Recruitments");
+        setPageSubtitle(configData.subtitle || "CHOOSE THE QUEST SUITS YOU THE MOST");
       } else {
-        if (res.status === 429) {
+        if (statusRes.status === 429 || configRes.status === 429) {
           setError("API RATE LIMIT EXCEEDED. PLEASE WAIT A MOMENT AND TRY AGAIN.");
         } else {
           setError("FAILED TO CONNECT TO SERVER. PLEASE RETRY.");
         }
       }
     } catch (err) {
-      console.error("Failed to fetch application status");
+      console.error("Failed to fetch page configuration & status", err);
       setError("NETWORK ERROR. PLEASE CHECK YOUR CONNECTION.");
     } finally {
       setIsLoadingApp(false);
@@ -467,101 +484,7 @@ export default function RecruitmentsPage() {
 
 
 
-  const techQuests: DepartmentData[] = [
-    {
-      title: "DEVELOPMENT",
-      desc: "CONSTRUCTING SYSTEMS/PRODUCTS THAT NEED TO STAND, SCALE, AND FUNCTION RELIABLY",
-      subtitle: "CONSTRUCTING SYSTEMS/PRODUCTS THAT NEED TO STAND, SCALE, AND FUNCTION RELIABLY.",
-      role: "Development",
-      iconType: "dev",
-      tagline: "BUILDING THE ARCHITECTURE AND CORE MOTORS THAT POWER DIGITAL PRODUCTS AND PLATFORMS",
-      description: "FROM FRONTEND WIZARDRY TO ROBUST BACKEND PIPELINES, JOIN DEVELOPMENT TO WRITE CLEAN CODE, SOLVE REAL-WORLD ENGINEERING PROBLEMS, AND SHIP PRODUCTION-READY APPS.",
-      skills: "REACT · NEXT.JS · NODE.JS · SYSTEM DESIGN",
-    },
-    {
-      title: "COMPETITIVE CODING",
-      desc: "LITERALLY ADVERSARIAL/COMPETITIVE, PUZZLE-SOLVING UNDER RULES AND TIME PRESSURE",
-      subtitle: "LITERALLY ADVERSARIAL/COMPETITIVE, PUZZLE-SOLVING UNDER RULES AND TIME PRESSURE.",
-      role: "Competitive Coding",
-      iconType: "cc",
-      tagline: "MASTERING ALGORITHMS, DATA STRUCTURES, AND SPEED TO CONQUER COMPLEX LOGICAL CHALLENGES",
-      description: "LOVE CRUSHING TIMEOUTS AND OPTIMIZING CODE TO O(1)? JOIN COMPETITIVE CODING TO TRAIN FOR HACKATHONS, ICPC, CONTESTS, AND BECOME AN ALGORITHMIC NINJA.",
-      skills: "C++ · PYTHON · DSA · DYNAMIC PROGRAMMING",
-    },
-    {
-      title: "UI/UX",
-      desc: "DESIGNING STRUCTURAL FLOWS AND SYSTEMS USERS NAVIGATE — ARCHITECTURE OF EXPERIENCE",
-      subtitle: "DESIGNING STRUCTURAL FLOWS AND SYSTEMS USERS NAVIGATE — ARCHITECTURE OF EXPERIENCE.",
-      role: "UI/UX",
-      iconType: "uiux",
-      tagline: "UI/UX IS ABOUT GUIDING USERS THROUGH A STRUCTURE/FLOW, HELPING THEM NAVIGATE WITHOUT GETTING LOST",
-      description: "PASSIONATE ABOUT HOW THINGS LOOK AND FEEL? JOIN UI/UX AND HELP DESIGN THE INTERFACES AND EXPERIENCES THAT CONNECT PEOPLE TO TECHNOLOGY — ONE THOUGHTFUL PIXEL AND FLOW AT A TIME.",
-      skills: "FIGMA · UI CRAFT · FRAMES",
-    },
-    {
-      title: "AI/ML",
-      desc: "HEAVY EXPERIMENTATION, ITERATION, TINKERING WITH MODELS/DATA UNTIL SOMETHING WORKS — CRAFT-DRIVEN",
-      subtitle: "HEAVY EXPERIMENTATION, ITERATION, TINKERING WITH MODELS/DATA UNTIL SOMETHING WORKS — CRAFT-DRIVEN.",
-      role: "AI/ML",
-      iconType: "aiml",
-      tagline: "TEACHING MACHINES TO LEARN, PREDICT, AND REASON THROUGH DATA AND NEURAL ARCHITECTURES",
-      description: "FASCINATED BY LLMS, COMPUTER VISION, AND DEEP LEARNING? JOIN AI/ML TO BUILD INTELLIGENT AGENTS, TRAIN NEURAL NETWORKS, AND PUSH THE FRONTIERS OF AI.",
-      skills: "PYTORCH · TENSORFLOW · LLMS · DATA SCIENCE",
-    },
-    {
-      title: "CYBER SECURITY",
-      desc: "ATTACKER-VS-DEFENDER MINDSET, CTF CULTURE, EXPLOITING/PATCHING CAT-AND-MOUSE",
-      subtitle: "ATTACKER-VS-DEFENDER MINDSET, CTF CULTURE, EXPLOITING/PATCHING CAT-AND-MOUSE.",
-      role: "Cyber Security",
-      iconType: "cyber",
-      tagline: "PROTECTING DIGITAL ASSETS, ETHICAL HACKING, AND MASTERING THE ART OF DEFENSE AND OFFENSE",
-      description: "READY TO CRACK CODES AND DEFEND SYSTEMS? JOIN CYBER SECURITY TO COMPETE IN CAPTURE-THE-FLAG (CTF) CONTESTS, PERFORM VULNERABILITY ASSESSMENTS, AND LEARN NETWORK SECURITY.",
-      skills: "CTF · ETHICAL HACKING · CRYPTOGRAPHY · PEN TESTING",
-    },
-  ];
-
-  const nonTechQuests: DepartmentData[] = [
-    {
-      title: "DESIGN",
-      desc: "CRAFTING THE CLUB'S VISUAL IDENTITIES, MERCHANDISE, POSTERS, AND DIGITAL ART.",
-      subtitle: "CRAFTING THE CLUB'S VISUAL IDENTITIES, MERCHANDISE, POSTERS, AND DIGITAL ART.",
-      role: "Design",
-      iconType: "design",
-      tagline: "COMMUNICATING IDEAS AND STORIES THROUGH VISUAL ART, BRANDING, AND GRAPHIC MASTERY",
-      description: "HAVE AN EYE FOR COLOR, TYPOGRAPHY, AND COMPOSITION? JOIN THE DESIGN QUEST TO CREATE STUNNING POSTERS, SOCIAL MEDIA ASSETS, AND BRANDING THAT DEFINE MIC.",
-      skills: "PHOTOSHOP · ILLUSTRATOR · GRAPHIC ART · BRANDING",
-    },
-    {
-      title: "MANAGEMENT",
-      desc: "THE BACKBONE OF CLUB OPERATIONS, EVENT LOGISTICS, AND PEOPLE LEADERSHIP.",
-      subtitle: "THE BACKBONE OF CLUB OPERATIONS, EVENT LOGISTICS, AND PEOPLE LEADERSHIP.",
-      role: "Management",
-      iconType: "mgmt",
-      tagline: "ORCHESTRATING EVENTS, LEADING TEAMS, AND TURNING BIG IDEAS INTO SEAMLESS EXECUTION",
-      description: "THRIVE ON LEADERSHIP, STRATEGY, AND ORGANIZING HACKATHONS AND WORKSHOPS? JOIN MANAGEMENT TO DIRECT MAJOR EVENTS, MANAGE LOGISTICS, AND CONNECT THE TECH ECOSYSTEM.",
-      skills: "EVENT MANAGEMENT · STRATEGY · LEADERSHIP · OPERATIONS",
-    },
-    {
-      title: "ENTREPRENEURSHIP",
-      desc: "INNOVATION MEETS BUSINESS STRATEGY, PRODUCT MARKET FIT, AND PITCH DECKS.",
-      subtitle: "INNOVATION MEETS BUSINESS STRATEGY, PRODUCT MARKET FIT, AND PITCH DECKS.",
-      role: "Entrepreneurship",
-      iconType: "ep",
-      tagline: "IDENTIFYING MARKET GAPS, PITCHING VENTURES, AND TRANSFORMING PROJECTS INTO STARTUPS",
-      description: "DREAM OF LAUNCHING YOUR OWN STARTUP? JOIN ENTREPRENEURSHIP TO LEARN PITCHING, BUSINESS MODELS, PRODUCT INCUBATION, AND BUILD THE NEXT GENERATION OF DISRUPTIVE VENTURES.",
-      skills: "PITCHING · BUSINESS STRATEGY · PRODUCT INCUBATION",
-    },
-    {
-      title: "CONTENT & MEDIA",
-      desc: "CONTENT CREATION, VIDEO PRODUCTION, SOCIAL MEDIA PRESENCE, AND PUBLIC RELATIONS.",
-      subtitle: "CONTENT CREATION, VIDEO PRODUCTION, SOCIAL MEDIA PRESENCE, AND PUBLIC RELATIONS.",
-      role: "Content & Media",
-      iconType: "media",
-      tagline: "CAPTURING STORIES, DIRECTING MEDIA, AND CRAFTING COMPELLING NARRATIVES FOR THE WORLD",
-      description: "PASSIONATE ABOUT FILMING, EDITING, COPYWRITING, AND SOCIAL MEDIA? JOIN CONTENT & MEDIA TO BROADCAST MIC'S IMPACT, DIRECT CREATIVE REELS, AND ENGAGE OUR COMMUNITY.",
-      skills: "VIDEO EDITING · COPYWRITING · SOCIAL MEDIA · PR",
-    },
-  ];
+  // Dynamic quests lists are fetched from backend on load
 
   return (
     <div
@@ -601,15 +524,7 @@ export default function RecruitmentsPage() {
         </div>
       )}
 
-      {!error && isLoadingApp && (
-        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center">
-          <div className="bg-[#B87B21] border-4 border-black p-6 flex items-center justify-center" style={{ boxShadow: "6px 6px 0px 0px #000" }}>
-            <div className="text-white text-[14px] animate-retro-blink uppercase tracking-widest drop-shadow-[2px_2px_0px_#000]">
-              LOADING MAP...
-            </div>
-          </div>
-        </div>
-      )}
+      <RetroLoader isLoading={isLoadingApp} title="LOADING MAP" />
 
       {/* Sized container to calculate correct scroll boundaries post-scaling */}
       <div
@@ -750,10 +665,10 @@ export default function RecruitmentsPage() {
           {/* ================= MAIN CONTENT & TITLE (z-20) ================= */}
           <div className="absolute text-left z-20" style={{ left: "406px", top: "82px" }}>
             <h1 className="font-normal text-black text-[64px] tracking-[0] leading-[67px] uppercase whitespace-nowrap">
-              Recruitments
+              {pageTitle}
             </h1>
             <p className="text-[12px] text-black font-bold tracking-[0] leading-[21px] mt-1.5 uppercase">
-              CHOOSE THE QUEST SUITS YOU THE MOST
+              {pageSubtitle}
             </p>
           </div>
 
