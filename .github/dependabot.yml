@@ -1,0 +1,79 @@
+# .github/dependabot.yml
+# Dependabot keeps your npm dependencies automatically up to date.
+# It opens PRs weekly for outdated packages and security patches.
+# Docs: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates
+
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "Asia/Kolkata"
+
+    # Cap the number of open PRs so your queue doesn't flood
+    open-pull-requests-limit: 8
+
+    # Group minor + patch updates into a single PR per category
+    # so you're not reviewing 20 separate PRs every Monday
+    groups:
+      # All @types/* devDeps in one PR
+      type-definitions:
+        patterns:
+          - "@types/*"
+        update-types:
+          - "minor"
+          - "patch"
+
+      # ESLint + TypeScript tooling in one PR
+      linting-and-types:
+        patterns:
+          - "eslint*"
+          - "typescript"
+          - "@typescript-eslint/*"
+        update-types:
+          - "minor"
+          - "patch"
+
+      # Next.js + React ecosystem in one PR (high-impact, kept separate)
+      nextjs-ecosystem:
+        patterns:
+          - "next"
+          - "react"
+          - "react-dom"
+          - "@types/react*"
+          - "next-auth"
+          - "@auth/*"
+
+      # Security & infra deps together
+      security-and-infra:
+        patterns:
+          - "@upstash/*"
+          - "@arcjet/*"
+          - "mongoose"
+          - "mongodb"
+          - "nodemailer"
+          - "zod"
+
+    # Never auto-merge — always require manual review
+    # (Dependabot Security PRs still get priority alerts in GitHub)
+    labels:
+      - "dependencies"
+      - "automated"
+
+    # Ignore major version bumps — they need manual evaluation
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+
+  # Also keep GitHub Actions themselves up to date
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "github-actions"
+      - "automated"
