@@ -118,6 +118,7 @@ interface AlertDialogProps {
   cancelText?: string
   loading?: boolean
   variant?: "default" | "destructive"
+  children?: React.ReactNode
 }
 
 export function AlertDialog({
@@ -130,6 +131,7 @@ export function AlertDialog({
   cancelText = "Cancel",
   loading = false,
   variant = "default",
+  children,
 }: AlertDialogProps) {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -138,6 +140,7 @@ export function AlertDialog({
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription className="mt-2 text-zinc-400 leading-normal">{description}</DialogDescription>
         </DialogHeader>
+        {children}
         <DialogFooter className="mt-4">
           <button
             onClick={onClose}
