@@ -1,8 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { dbConnect } from "@/lib/mongodb";
 import Application from "@/models/Application";
 
+// Whitelist of sortable fields to prevent unintended field exposure
+const ALLOWED_SORTS = new Set([
+  "-createdAt",
+  "createdAt",
+  "-updatedAt",
+  "updatedAt",
+  "-overallStatus",
+  "overallStatus",
+  "userEmail",
+  "-userEmail",
+  "-firstPreference",
+  "firstPreference",
+]);
+
+// Escape special regex characters to prevent ReDoS
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 export async function GET(req: NextRequest) {
+  // ── Auth guard ────────────────────────────────────────────────────────────
+  const session = await auth();
+  if (!session?.user || (session.user as { role?: string }).role !== "admin") {
+    return NextResponse.json(
+      { success: false, error: "Unauthorized." },
+      { status: 403 }
+    );
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   await dbConnect();
 
   const { searchParams } = req.nextUrl;
@@ -13,7 +43,10 @@ export async function GET(req: NextRequest) {
   const stage = searchParams.get("stage") ?? "";
   const pref = searchParams.get("pref") ?? ""; // "first" | "second"
   const search = searchParams.get("q") ?? "";
-  const sort = searchParams.get("sort") ?? "-createdAt";
+  const rawSort = searchParams.get("sort") ?? "-createdAt";
+
+  // Whitelist the sort field — fall back to default if unknown
+  const sort = ALLOWED_SORTS.has(rawSort) ? rawSort : "-createdAt";
 
   const filter: Record<string, unknown> = { cycleId: "2026-27" };
 
@@ -27,8 +60,10 @@ export async function GET(req: NextRequest) {
     filter["secondPrefProgress.currentStage"] = parseInt(stage);
   }
   if (search) {
+    // Escape user input before using it in a MongoDB $regex to prevent ReDoS
+    const safeSearch = escapeRegex(search);
     filter.$or = [
-      { userEmail: { $regex: search, $options: "i" } },
+      { userEmail: { $regex: safeSearch, $options: "i" } },
     ];
   }
 

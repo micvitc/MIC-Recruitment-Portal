@@ -12,6 +12,20 @@ interface RouteParams {
 // GET — full application details
 export async function GET(_req: NextRequest, { params }: RouteParams) {
   const { id } = await params;
+
+  // ── Auth guard ────────────────────────────────────────────────────────────
+  const getSession = await auth();
+  if (
+    !getSession?.user ||
+    (getSession.user as { role?: string }).role !== "admin"
+  ) {
+    return NextResponse.json(
+      { success: false, error: "Unauthorized." },
+      { status: 403 }
+    );
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   await dbConnect();
 
   const application = await Application.findById(id).lean();
@@ -33,19 +47,25 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
   const { id } = await params;
   const session = await auth();
 
+  // ── Auth guard ────────────────────────────────────────────────────────────
+  if (!session?.user || (session.user as { role?: string }).role !== "admin") {
+    return NextResponse.json(
+      { success: false, error: "Unauthorized." },
+      { status: 403 }
+    );
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   await dbConnect();
 
   const body = await req.json();
-  const { action, preference, note } = body;
+  const { action, preference, note, scores } = body;
+
+  if (!["advance", "reject"].includes(action) || !["first", "second"].includes(preference)) {
+    return NextResponse.json({ success: false, error: "Invalid action or preference." }, { status: 400 });
+  }
   // action: "advance" | "reject"
   // preference: "first" | "second"
-
-  if (!["advance", "reject"].includes(action)) {
-    return NextResponse.json({ success: false, error: "Invalid action." }, { status: 400 });
-  }
-  if (!["first", "second"].includes(preference)) {
-    return NextResponse.json({ success: false, error: "Invalid preference." }, { status: 400 });
-  }
 
   const application = await Application.findById(id);
   if (!application) {
@@ -89,6 +109,11 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
           ? application.firstPrefProgress
           : application.secondPrefProgress).stages[currentStageIdx].adminNote = note;
       }
+      if (scores) {
+        (preference === "first"
+          ? application.firstPrefProgress
+          : application.secondPrefProgress).stages[currentStageIdx].scores = scores;
+      }
     }
 
     if (isLastStage) {
@@ -101,6 +126,15 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
         ? application.firstPrefProgress
         : application.secondPrefProgress).currentStage = nextStage;
     }
+
+    // Log advance action
+    const { logAdminAction } = await import("@/lib/logger");
+    await logAdminAction(
+      session.user.email ?? "unknown",
+      isLastStage ? "stage_select" : "stage_advance",
+      application.userEmail,
+      `Advanced ${preference} preference (${deptSlug}) to ${isLastStage ? "Selected" : "Stage " + (nextStage - 1)}.`
+    );
   } else {
     // reject
     if (currentStageIdx !== -1) {
@@ -135,6 +169,15 @@ export async function PATCH(req: NextRequest, { params }: RouteParams) {
         application.overallStatus = "rejected";
       }
     }
+
+    // Log reject action
+    const { logAdminAction } = await import("@/lib/logger");
+    await logAdminAction(
+      session.user.email ?? "unknown",
+      "candidate_reject",
+      application.userEmail,
+      `Rejected from ${preference} preference (${deptSlug}).`
+    );
   }
 
   application.markModified(progressKey);

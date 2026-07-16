@@ -4,20 +4,21 @@ import { dbConnect } from "@/lib/mongodb";
 import Application from "@/models/Application";
 
 export async function GET(req: NextRequest) {
+  // ── Auth guard ────────────────────────────────────────────────────────────
   const session = await auth();
-  if (!session?.user?.id) {
-    return new NextResponse("Unauthorized", { status: 401 });
+  if (!session?.user || (session.user as { role?: string }).role !== "admin") {
+    return new NextResponse("Unauthorized", { status: 403 });
   }
+  // ─────────────────────────────────────────────────────────────────────────
 
-  // Strictly, we should check if session.user is an admin.
-  // Assuming anyone who hits this route and has an active session is allowed,
-  // as per the existing admin routes.
+  // Suppress unused-variable lint warning; req is needed for the handler signature
+  void req;
 
   try {
     await dbConnect();
 
-    // We can fetch all applications
-    const applications = await Application.find({}).lean();
+    // Fetch all applications for the current cycle only
+    const applications = await Application.find({ cycleId: "2026-27" }).lean();
 
     if (!applications || applications.length === 0) {
       return new NextResponse("No applications found.", { status: 404 });
@@ -40,20 +41,22 @@ export async function GET(req: NextRequest) {
     ];
 
     // Map rows
-    const rows = applications.map((app: any) => {
+    const rows = (applications as Record<string, unknown>[]).map((app) => {
+      const firstProgress = app.firstPrefProgress as Record<string, unknown> | undefined;
+      const secondProgress = app.secondPrefProgress as Record<string, unknown> | undefined;
       return [
-        app._id.toString(),
-        app.userEmail || "",
-        new Date(app.createdAt).toISOString(),
-        app.overallStatus || "",
-        app.firstPreference || "",
-        app.firstPrefType || "",
-        app.firstPrefProgress?.status || "",
-        app.firstPrefProgress?.currentStage?.toString() || "1",
-        app.secondPreference || "",
-        app.secondPrefType || "",
-        app.secondPrefProgress?.status || "",
-        app.secondPrefProgress?.currentStage?.toString() || "1",
+        String(app._id ?? ""),
+        String(app.userEmail ?? ""),
+        app.createdAt ? new Date(app.createdAt as string).toISOString() : "",
+        String(app.overallStatus ?? ""),
+        String(app.firstPreference ?? ""),
+        String(app.firstPrefType ?? ""),
+        String(firstProgress?.status ?? ""),
+        String(firstProgress?.currentStage ?? "1"),
+        String(app.secondPreference ?? ""),
+        String(app.secondPrefType ?? ""),
+        String(secondProgress?.status ?? ""),
+        String(secondProgress?.currentStage ?? "1"),
       ].map((cell) => `"${cell.replace(/"/g, '""')}"`); // Escape quotes for CSV
     });
 

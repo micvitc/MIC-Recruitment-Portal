@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/auth";
 import { dbConnect } from "@/lib/mongodb";
 import Department from "@/models/Department";
 
@@ -8,6 +9,17 @@ interface RouteParams {
 
 export async function GET(_req: NextRequest, { params }: RouteParams) {
   const { dept } = await params;
+
+  // ── Auth guard ────────────────────────────────────────────────────────────
+  const session = await auth();
+  if (!session?.user || (session.user as { role?: string }).role !== "admin") {
+    return NextResponse.json(
+      { success: false, error: "Unauthorized." },
+      { status: 403 }
+    );
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   await dbConnect();
   const department = await Department.findOne({ slug: dept }).lean();
   if (!department) {
@@ -18,6 +30,17 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
 
 export async function PUT(req: NextRequest, { params }: RouteParams) {
   const { dept } = await params;
+
+  // ── Auth guard ────────────────────────────────────────────────────────────
+  const session = await auth();
+  if (!session?.user || (session.user as { role?: string }).role !== "admin") {
+    return NextResponse.json(
+      { success: false, error: "Unauthorized." },
+      { status: 403 }
+    );
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   await dbConnect();
   const body = await req.json();
 
@@ -39,6 +62,20 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
   if (!department) {
     return NextResponse.json({ success: false, error: "Not found." }, { status: 404 });
   }
+
+  // Log action
+  const { logAdminAction } = await import("@/lib/logger");
+  const details = [];
+  if (isActive !== undefined) details.push(`Active: ${isActive}`);
+  if (maxCapacity !== undefined) details.push(`Capacity: ${maxCapacity}`);
+  if (totalStages !== undefined) details.push(`Stages: ${totalStages}`);
+  
+  await logAdminAction(
+    session.user.email ?? "unknown",
+    "dept_update",
+    dept,
+    `Updated settings: ${details.join(", ")}`
+  );
 
   return NextResponse.json({ success: true, department });
 }
