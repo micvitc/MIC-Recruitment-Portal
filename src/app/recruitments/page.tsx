@@ -7,6 +7,7 @@ import DepartmentPopup, { DepartmentData } from "@/components/DepartmentPopup";
 import { Loader2 } from "lucide-react";
 import posthog from "posthog-js";
 import RetroLoader from "@/components/RetroLoader";
+import MicLogo from "@/components/MicLogo";
 
 const pressStart = Press_Start_2P({
   weight: "400",
@@ -38,7 +39,7 @@ function QuestCard({ title, desc, role, state, progressStatus, onSelect }: Quest
       onClick={isDisabled ? undefined : onSelect}
       className={`w-[371px] h-[262px] flex flex-col items-start p-1 rounded-[10px] border-4 border-solid border-black relative shrink-0 select-none transition-all duration-150 ${
         isDisabled
-          ? "bg-[#FFB59F] opacity-90"
+          ? "bg-[#FFB59F]"
           : isSelected
           ? "bg-white cursor-pointer hover:-translate-y-3 hover:scale-[1.02] active:translate-y-0 active:scale-[0.98]"
           : "bg-[#FFB59F] cursor-pointer hover:-translate-y-3 hover:scale-[1.02] active:translate-y-0 active:scale-[0.98]"
@@ -47,7 +48,7 @@ function QuestCard({ title, desc, role, state, progressStatus, onSelect }: Quest
     >
       {/* Card Header Tag */}
       <div className={`flex flex-col items-center py-2 relative self-stretch w-full rounded-[6px] border-b-4 border-solid border-black ${isSelected ? "bg-[#E29A2B]" : "bg-[#A93710]"}`}>
-        <div className="relative flex items-center justify-center w-fit text-black font-bold text-[12px] tracking-wider uppercase leading-none whitespace-nowrap">
+        <div className="relative flex items-center justify-center w-fit text-white drop-shadow-[2px_2px_0px_#000] font-bold text-[12px] tracking-wider uppercase leading-none whitespace-nowrap">
           {title}
         </div>
       </div>
@@ -55,7 +56,7 @@ function QuestCard({ title, desc, role, state, progressStatus, onSelect }: Quest
       {/* Inner White Box */}
       <div className={`flex-grow w-full p-3 rounded-b-[6px] flex items-center justify-center ${isSelected ? "bg-[#FFF4E6]" : "bg-[#FFDED6]"}`}>
         <div className={`w-full h-full ${isDisabled ? "bg-[#FFCDC0]" : "bg-white"} border-4 border-solid border-black p-3.5 flex flex-col items-center justify-center text-center ${isSelected ? "gap-4" : ""}`}>
-          <p className="text-[10px] text-black font-bold tracking-wide leading-relaxed uppercase">
+          <p className={`text-[10px] font-bold tracking-wide leading-relaxed uppercase ${isDisabled ? "text-[#A93710] drop-shadow-[1px_1px_0px_#fff]" : "text-black"}`}>
             {isDisabled ? "YOU HAVE ALREADY APPLIED FOR A SIMILAR QUEST" : isSelected ? "WANNA RECHECK YOUR GEAR FOR THE QUEST?" : desc}
           </p>
           
@@ -403,6 +404,23 @@ export default function RecruitmentsPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  // Map vertical wheel scroll to horizontal scroll
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      // Only map if vertical scroll is dominant
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        e.preventDefault();
+        container.scrollBy({ left: e.deltaY, behavior: "auto" });
+      }
+    };
+
+    container.addEventListener("wheel", handleWheel, { passive: false });
+    return () => container.removeEventListener("wheel", handleWheel);
+  }, []);
+
   const handleOpenPopup = (quest: DepartmentData, type: "tech" | "non-tech", slug: string) => {
     if (isLoadingApp) return;
 
@@ -492,14 +510,51 @@ export default function RecruitmentsPage() {
       ref={scrollContainerRef}
       onScroll={handleScroll}
     >
-      {/* Profile Button */}
-      <button
-        onClick={() => router.push("/profile")}
-        className="fixed top-6 right-6 z-50 bg-[#1093EB] hover:bg-[#16B6F4] text-white px-4 py-3 border-4 border-black text-[12px] uppercase tracking-widest font-bold transition-transform hover:-translate-y-1 active:translate-y-0"
-        style={{ boxShadow: "4px 4px 0px 0px #000" }}
+      {/* Floating Header Buttons (Fixed) */}
+      <div className="fixed top-6 right-6 z-50 flex items-center gap-4">
+        <button
+          onClick={() => {
+            playRetroSound("open");
+            router.push("/faqs");
+          }}
+          className="bg-[#7CA922] hover:bg-[#8CB932] text-black px-4 py-3 border-4 border-black text-[12px] uppercase tracking-widest font-bold transition-transform hover:-translate-y-1 active:translate-y-0"
+          style={{ boxShadow: "4px 4px 0px 0px #000" }}
+        >
+          FAQS
+        </button>
+        <button
+          onClick={() => router.push("/profile")}
+          className="bg-[#1093EB] hover:bg-[#16B6F4] text-white px-4 py-3 border-4 border-black text-[12px] uppercase tracking-widest font-bold transition-transform hover:-translate-y-1 active:translate-y-0"
+          style={{ boxShadow: "4px 4px 0px 0px #000" }}
+        >
+          View Profile
+        </button>
+      </div>
+
+      {/* Fixed Title Banner */}
+      <div 
+        className="fixed z-40 origin-top-left pointer-events-none"
+        style={{ 
+          left: `${320 * scale}px`, 
+          top: `${24 * scale}px`, 
+          transform: `scale(${scale})` 
+        }}
       >
-        View Profile
-      </button>
+        <div 
+          className="bg-black border-4 border-black px-8 py-6 flex flex-col items-start justify-center pointer-events-auto" 
+          style={{ boxShadow: "8px 8px 0px 0px rgba(0,0,0,0.5)" }}
+        >
+          <h1 className="font-normal text-white text-[64px] tracking-[0] leading-[67px] uppercase whitespace-nowrap">
+            {pageTitle}
+          </h1>
+          <p className="text-[12px] text-white font-bold tracking-[0] leading-[21px] mt-2 uppercase">
+            {pageSubtitle}
+          </p>
+        </div>
+      </div>
+
+      {/* Fixed Logo */}
+      <MicLogo />
       {error && (
         <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center p-4">
           <div className="bg-[#FFE4D6] border-4 border-black p-8 max-w-lg w-full relative flex flex-col items-center gap-6" style={{ boxShadow: "8px 8px 0px 0px rgba(0,0,0,0.5)" }}>
@@ -602,17 +657,16 @@ export default function RecruitmentsPage() {
               style={{ left: `${idx * 245}px` }}
             />
           ))}
-          {/* Green Bushes Silhouettes (Figma Positions) */}
-          <img
-            src="/bushes_pixel.svg"
-            alt="Bushes Left"
-            className="absolute top-[739px] left-0 w-[1456px] h-[200px] z-4 pointer-events-none select-none pixelated"
-          />
-          <img
-            src="/bushes_pixel.svg"
-            alt="Bushes Right"
-            className="absolute top-[739px] left-[1409px] w-[1456px] h-[200px] z-4 pointer-events-none select-none pixelated"
-          />
+          {/* Green Bushes Silhouettes (Continuous without gaps across 2865px canvas) */}
+          {Array.from({ length: 3 }).map((_, idx) => (
+            <img
+              key={`bush-${idx}`}
+              src="/bushes_pixel.svg"
+              alt={`Bushes ${idx}`}
+              className="absolute top-[739px] w-[1456px] h-[200px] z-4 pointer-events-none select-none pixelated"
+              style={{ left: `${idx * 1409}px` }}
+            />
+          ))}
 
           {/* Green Mario Pipes (Exact Figma Positions & Heights) */}
           {/* Top Pipes (pointing down) */}
@@ -630,28 +684,9 @@ export default function RecruitmentsPage() {
           <RetroPipe left="1885px" top="570px" height={333} isTop={false} />
           <RetroPipe left="2375px" top="602px" height={301} isTop={false} />
 
-          {/* ================= FIXED FLOATING CONTROLS (z-30) ================= */}
-          {/* MIC Logo (Standalone without background or text, slightly reduced size) */}
-          <img
-            src="/mic_logo_pixel.png"
-            alt="MIC Logo"
-            className="absolute z-30 pixelated select-none pointer-events-none"
-            style={{ left: "64px", top: "24px", width: "110px", height: "79px" }}
-          />
 
-          {/* FAQs Button */}
-          <div className="absolute left-1/2 -translate-x-1/2 top-8 z-30">
-            <button
-              onClick={() => {
-                playRetroSound("open");
-                router.push("/faqs");
-              }}
-              className="bg-[#7CA922] hover:bg-[#8CB932] text-black text-[11px] font-bold py-2 px-5 border-4 border-black cursor-pointer uppercase tracking-wider font-press-start"
-              style={{ boxShadow: "4px 4px 0px 0px #000" }}
-            >
-              FAQS
-            </button>
-          </div>
+
+
 
 
 
@@ -662,15 +697,7 @@ export default function RecruitmentsPage() {
             </div>
           )}
 
-          {/* ================= MAIN CONTENT & TITLE (z-20) ================= */}
-          <div className="absolute text-left z-20" style={{ left: "406px", top: "82px" }}>
-            <h1 className="font-normal text-black text-[64px] tracking-[0] leading-[67px] uppercase whitespace-nowrap">
-              {pageTitle}
-            </h1>
-            <p className="text-[12px] text-black font-bold tracking-[0] leading-[21px] mt-1.5 uppercase">
-              {pageSubtitle}
-            </p>
-          </div>
+
 
           {/* Interactive Flappy Bird Character (Ultra-Smooth 60/120fps GPU Physics Engine) */}
           <div 
@@ -696,13 +723,16 @@ export default function RecruitmentsPage() {
           {/* ================= TECH ROW ================= */}
           {/* Tech signboard */}
           <div 
-            className="absolute shadow-[4px_4px_0px_#00000040] z-20"
-            style={{ left: "64px", top: "313px", width: "240px", height: "80px" }}
+            className="absolute bg-[#B87B21] text-black text-[22px] font-bold border-4 border-black z-20 flex items-center justify-center uppercase tracking-wider"
+            style={{ 
+              left: "64px", 
+              top: "313px", 
+              width: "240px", 
+              height: "80px",
+              boxShadow: "6px 6px 0px 0px #000"
+            }}
           >
-            <div className="absolute w-[99.17%] h-full top-0 left-0 bg-[#B87B21]" />
-            <div className="absolute w-[80.00%] h-[62.50%] top-[18.75%] left-[9.58%] font-normal text-black text-2xl text-center tracking-[0] leading-none flex items-center justify-center h-[50px] uppercase">
-              Tech
-            </div>
+            TECH
           </div>
 
           <NormalArrow top="338px" left="305px" width={44} height={28} />
@@ -744,15 +774,18 @@ export default function RecruitmentsPage() {
           })}
 
           {/* ================= NON-TECH ROW ================= */}
-          {/* Non Tech signboard (Width reduced from 422px down to 280px) */}
+          {/* Non Tech signboard */}
           <div 
-            className="absolute shadow-[4px_4px_0px_#00000040] z-20"
-            style={{ left: "64px", top: "588px", width: "280px", height: "80px" }}
+            className="absolute bg-[#B87B21] text-black text-[22px] font-bold border-4 border-black z-20 flex items-center justify-center uppercase tracking-wider"
+            style={{ 
+              left: "64px", 
+              top: "588px", 
+              width: "280px", 
+              height: "80px",
+              boxShadow: "6px 6px 0px 0px #000"
+            }}
           >
-            <div className="absolute w-[99.17%] h-full top-0 left-0 bg-[#B87B21]" />
-            <div className="absolute w-[85.00%] h-[62.50%] top-[18.75%] left-[7.50%] font-normal text-black text-2xl text-center tracking-[0] leading-none flex items-center justify-center h-[50px] uppercase">
-              Non Tech
-            </div>
+            NON TECH
           </div>
 
           <NormalArrow top="613px" left="365px" width={64} height={32} />

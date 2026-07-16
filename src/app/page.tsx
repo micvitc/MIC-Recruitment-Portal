@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Press_Start_2P } from "next/font/google";
 import RetroLoader from "@/components/RetroLoader";
+import MicLogo from "@/components/MicLogo";
 
 const pressStart = Press_Start_2P({
   weight: "400",
@@ -148,8 +149,15 @@ export default function Homepage() {
             ))}
 
             {/* Green Bushes */}
-            <img src="/bushes_pixel.svg" alt="Bushes Left" className="absolute top-[739px] left-0 w-[1456px] h-[200px] z-4 pointer-events-none select-none pixelated" />
-            <img src="/bushes_pixel.svg" alt="Bushes Right" className="absolute top-[739px] left-[1454px] w-[1456px] h-[200px] z-4 pointer-events-none select-none pixelated" />
+            {Array.from({ length: 3 }).map((_, idx) => (
+              <img
+                key={`bush-${idx}`}
+                src="/bushes_pixel.svg"
+                alt={`Bushes ${idx}`}
+                className="absolute top-[739px] w-[1456px] h-[200px] z-4 pointer-events-none select-none pixelated"
+                style={{ left: `${idx * 1409}px` }}
+              />
+            ))}
 
             {/* Green Pipes framing the center (Aligned vertically to hold the signboard) */}
             <RetroPipe left="900px" top="-5px" height={250} isTop={true} />
@@ -257,9 +265,7 @@ export default function Homepage() {
         </div>
 
         {/* Static Header Elements */}
-        <div className="absolute top-6 left-8 z-30">
-          <img src="/mic_logo_pixel.png" alt="MIC Logo" className="pixelated w-[110px] h-[79px] select-none pointer-events-none hover:animate-retro-shake" />
-        </div>
+        <MicLogo />
 
         <div className="absolute top-8 right-8 z-30">
           <button

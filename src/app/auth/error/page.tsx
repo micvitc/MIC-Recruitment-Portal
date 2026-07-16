@@ -3,6 +3,7 @@
 import { useSearchParams, useRouter } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { Press_Start_2P } from "next/font/google";
+import MicLogo from "@/components/MicLogo";
 
 const pressStart = Press_Start_2P({
   weight: "400",
@@ -114,7 +115,15 @@ function ErrorContent() {
             <img key={idx} src="/city_skyline.svg" alt="Skyline Block" className="absolute top-[631px] w-[246px] h-[249px] opacity-75 pointer-events-none select-none pixelated" style={{ left: `${idx * 245}px` }} />
           ))}
 
-          <img src="/bushes_pixel.svg" alt="Bushes" className="absolute top-[739px] left-[500px] w-[1456px] h-[200px] z-4 pointer-events-none select-none pixelated" />
+          {Array.from({ length: 3 }).map((_, idx) => (
+            <img
+              key={`bush-${idx}`}
+              src="/bushes_pixel.svg"
+              alt={`Bushes ${idx}`}
+              className="absolute top-[739px] w-[1456px] h-[200px] z-4 pointer-events-none select-none pixelated"
+              style={{ left: `${idx * 1409}px` }}
+            />
+          ))}
 
           <RetroPipe left="1156px" top="-5px" height={400} isTop={true} />
           <RetroPipe left="1656px" top="-5px" height={400} isTop={true} />
@@ -140,9 +149,7 @@ function ErrorContent() {
         </div>
       </div>
 
-      <div className="absolute top-6 left-8 z-30 cursor-pointer" onClick={() => router.push("/")}>
-        <img src="/mic_logo_pixel.png" alt="MIC Logo" className="pixelated w-[110px] h-[79px] select-none hover:animate-retro-shake" />
-      </div>
+      <MicLogo />
 
       {/* Error Box */}
       <div className="relative z-40 w-full max-w-[650px] px-4 animate-pixel-slide-up">
