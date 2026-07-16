@@ -169,9 +169,10 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         yearDistribution: yearAgg.map((y) => ({ year: String(y._id || "Other"), count: y.count })),
       },
     });
-  } catch (err: any) {
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : "Failed to fetch department statistics.";
     return NextResponse.json(
-      { success: false, error: err.message ?? "Failed to fetch department statistics." },
+      { success: false, error: errorMessage },
       { status: 500 }
     );
   }
