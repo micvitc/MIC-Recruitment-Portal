@@ -92,6 +92,11 @@ async function run() {
       type: "tech" as const,
       totalStages: 2,
       maxCapacity: 20,
+      desc: "CONSTRUCTING SYSTEMS/PRODUCTS THAT NEED TO STAND, SCALE, AND FUNCTION RELIABLY",
+      tagline: "BUILDING THE ARCHITECTURE AND CORE MOTORS THAT POWER DIGITAL PRODUCTS AND PLATFORMS",
+      description: "FROM FRONTEND WIZARDRY TO ROBUST BACKEND PIPELINES, JOIN DEVELOPMENT TO WRITE CLEAN CODE, SOLVE REAL-WORLD ENGINEERING PROBLEMS, AND SHIP PRODUCTION-READY APPS.",
+      skills: "REACT · NEXT.JS · NODE.JS · SYSTEM DESIGN",
+      iconType: "dev",
       stages: [
         personalInfoStage,
         {
@@ -163,6 +168,11 @@ async function run() {
       type: "tech" as const,
       totalStages: 2,
       maxCapacity: 15,
+      desc: "LITERALLY ADVERSARIAL/COMPETITIVE, PUZZLE-SOLVING UNDER RULES AND TIME PRESSURE",
+      tagline: "MASTERING ALGORITHMS, DATA STRUCTURES, AND SPEED TO CONQUER COMPLEX LOGICAL CHALLENGES",
+      description: "LOVE CRUSHING TIMEOUTS AND OPTIMIZING CODE TO O(1)? JOIN COMPETITIVE CODING TO TRAIN FOR HACKATHONS, ICPC, CONTESTS, AND BECOME AN ALGORITHMIC NINJA.",
+      skills: "C++ · PYTHON · DSA · DYNAMIC PROGRAMMING",
+      iconType: "cc",
       stages: [
         personalInfoStage,
         {
@@ -235,6 +245,11 @@ async function run() {
       type: "tech" as const,
       totalStages: 2,
       maxCapacity: 12,
+      desc: "DESIGNING STRUCTURAL FLOWS AND SYSTEMS USERS NAVIGATE — ARCHITECTURE OF EXPERIENCE",
+      tagline: "UI/UX IS ABOUT GUIDING USERS THROUGH A STRUCTURE/FLOW, HELPING THEM NAVIGATE WITHOUT GETTING LOST",
+      description: "PASSIONATE ABOUT HOW THINGS LOOK AND FEEL? JOIN UI/UX AND HELP DESIGN THE INTERFACES AND EXPERIENCES THAT CONNECT PEOPLE TO TECHNOLOGY — ONE THOUGHTFUL PIXEL AND FLOW AT A TIME.",
+      skills: "FIGMA · UI CRAFT · FRAMES",
+      iconType: "uiux",
       stages: [
         personalInfoStage,
         {
@@ -300,6 +315,11 @@ async function run() {
       type: "tech" as const,
       totalStages: 2,
       maxCapacity: 15,
+      desc: "HEAVY EXPERIMENTATION, ITERATION, TINKERING WITH MODELS/DATA UNTIL SOMETHING WORKS — CRAFT-DRIVEN",
+      tagline: "TEACHING MACHINES TO LEARN, PREDICT, AND REASON THROUGH DATA AND NEURAL ARCHITECTURES",
+      description: "FASCINATED BY LLMS, COMPUTER VISION, AND DEEP LEARNING? JOIN AI/ML TO BUILD INTELLIGENT AGENTS, TRAIN NEURAL NETWORKS, AND PUSH THE FRONTIERS OF AI.",
+      skills: "PYTORCH · TENSORFLOW · LLMS · DATA SCIENCE",
+      iconType: "aiml",
       stages: [
         personalInfoStage,
         {
@@ -376,6 +396,11 @@ async function run() {
       type: "tech" as const,
       totalStages: 2,
       maxCapacity: 12,
+      desc: "ATTACKER-VS-DEFENDER MINDSET, CTF CULTURE, EXPLOITING/PATCHING CAT-AND-MOUSE",
+      tagline: "PROTECTING DIGITAL ASSETS, ETHICAL HACKING, AND MASTERING THE ART OF DEFENSE AND OFFENSE",
+      description: "READY TO CRACK CODES AND DEFEND SYSTEMS? JOIN CYBER SECURITY TO COMPETE IN CAPTURE-THE-FLAG (CTF) CONTESTS, PERFORM VULNERABILITY ASSESSMENTS, AND LEARN NETWORK SECURITY.",
+      skills: "CTF · ETHICAL HACKING · CRYPTOGRAPHY · PEN TESTING",
+      iconType: "cyber",
       stages: [
         personalInfoStage,
         {
@@ -450,6 +475,11 @@ async function run() {
       type: "non-tech" as const,
       totalStages: 2,
       maxCapacity: 15,
+      desc: "CRAFTING THE CLUB'S VISUAL IDENTITIES, MERCHANDISE, POSTERS, AND DIGITAL ART.",
+      tagline: "COMMUNICATING IDEAS AND STORIES THROUGH VISUAL ART, BRANDING, AND GRAPHIC MASTERY",
+      description: "HAVE AN EYE FOR COLOR, TYPOGRAPHY, AND COMPOSITION? JOIN THE DESIGN QUEST TO CREATE STUNNING POSTERS, SOCIAL MEDIA ASSETS, AND BRANDING THAT DEFINE MIC.",
+      skills: "PHOTOSHOP · ILLUSTRATOR · GRAPHIC ART · BRANDING",
+      iconType: "design",
       stages: [
         personalInfoStage,
         {
@@ -515,6 +545,11 @@ async function run() {
       type: "non-tech" as const,
       totalStages: 2,
       maxCapacity: 15,
+      desc: "THE BACKBONE OF CLUB OPERATIONS, EVENT LOGISTICS, AND PEOPLE LEADERSHIP.",
+      tagline: "ORCHESTRATING EVENTS, LEADING TEAMS, AND TURNING BIG IDEAS INTO SEAMLESS EXECUTION",
+      description: "THRIVE ON LEADERSHIP, STRATEGY, AND ORGANIZING HACKATHONS AND WORKSHOPS? JOIN MANAGEMENT TO DIRECT MAJOR EVENTS, MANAGE LOGISTICS, AND CONNECT THE TECH ECOSYSTEM.",
+      skills: "EVENT MANAGEMENT · STRATEGY · LEADERSHIP · OPERATIONS",
+      iconType: "mgmt",
       stages: [
         personalInfoStage,
         {
@@ -573,6 +608,11 @@ async function run() {
       type: "non-tech" as const,
       totalStages: 2,
       maxCapacity: 12,
+      desc: "INNOVATION MEETS BUSINESS STRATEGY, PRODUCT MARKET FIT, AND PITCH DECKS.",
+      tagline: "IDENTIFYING MARKET GAPS, PITCHING VENTURES, AND TRANSFORMING PROJECTS INTO STARTUPS",
+      description: "DREAM OF LAUNCHING YOUR OWN STARTUP? JOIN ENTREPRENEURSHIP TO LEARN PITCHING, BUSINESS MODELS, PRODUCT INCUBATION, AND BUILD THE NEXT GENERATION OF DISRUPTIVE VENTURES.",
+      skills: "PITCHING · BUSINESS STRATEGY · PRODUCT INCUBATION",
+      iconType: "ep",
       stages: [
         personalInfoStage,
         {
@@ -634,6 +674,11 @@ async function run() {
       type: "non-tech" as const,
       totalStages: 2,
       maxCapacity: 12,
+      desc: "CONTENT CREATION, VIDEO PRODUCTION, SOCIAL MEDIA PRESENCE, AND PUBLIC RELATIONS.",
+      tagline: "CAPTURING STORIES, DIRECTING MEDIA, AND CRAFTING COMPELLING NARRATIVES FOR THE WORLD",
+      description: "PASSIONATE ABOUT FILMING, EDITING, COPYWRITING, AND SOCIAL MEDIA? JOIN CONTENT & MEDIA TO BROADCAST MIC'S IMPACT, DIRECT CREATIVE REELS, AND ENGAGE OUR COMMUNITY.",
+      skills: "VIDEO EDITING · COPYWRITING · SOCIAL MEDIA · PR",
+      iconType: "media",
       stages: [
         personalInfoStage,
         {

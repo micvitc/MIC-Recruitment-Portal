@@ -34,6 +34,11 @@ export interface IDepartment extends Document {
   stages: StageConfig[];
   isActive: boolean;
   maxCapacity: number;
+  desc?: string;
+  tagline?: string;
+  description?: string;
+  skills?: string;
+  iconType?: string;
 }
 
 const FormFieldSchema = new Schema<FormField>(
@@ -82,6 +87,11 @@ const DepartmentSchema = new Schema<IDepartment>(
     stages: { type: [StageConfigSchema], default: [] },
     isActive: { type: Boolean, default: true },
     maxCapacity: { type: Number, default: 20 },
+    desc: String,
+    tagline: String,
+    description: String,
+    skills: String,
+    iconType: String,
   },
   { timestamps: true }
 );
