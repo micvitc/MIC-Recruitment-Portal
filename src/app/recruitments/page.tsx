@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Press_Start_2P } from "next/font/google";
 import DepartmentPopup, { DepartmentData } from "@/components/DepartmentPopup";
+import { Loader2 } from "lucide-react";
 
 const pressStart = Press_Start_2P({
   weight: "400",
@@ -11,33 +12,61 @@ const pressStart = Press_Start_2P({
   variable: "--font-press-start-2p",
 });
 
+const ROLE_TO_SLUG: Record<string, string> = {
+  "UI/UX": "ui-ux",
+  "AI/ML": "ai-ml",
+  "Content & Media": "content-media",
+};
+
 interface QuestCardProps {
   title: string;
   desc: string;
   role: string;
+  state: "available" | "selected" | "disabled";
+  progressStatus?: string; // e.g. "in-progress", "passed", "pending"
   onSelect: () => void;
 }
 
-function QuestCard({ title, desc, role, onSelect }: QuestCardProps) {
+function QuestCard({ title, desc, role, state, progressStatus, onSelect }: QuestCardProps) {
+  const isSelected = state === "selected";
+  const isDisabled = state === "disabled";
+
   return (
     <div
-      onClick={onSelect}
-      className="w-[371px] h-[262px] flex flex-col items-start p-1 bg-[#FFB59F] rounded-[10px] border-4 border-solid border-black relative shrink-0 cursor-pointer select-none transition-all duration-150 hover:-translate-y-3 hover:scale-[1.02] active:translate-y-0 active:scale-[0.98] group"
+      onClick={isDisabled ? undefined : onSelect}
+      className={`w-[371px] h-[262px] flex flex-col items-start p-1 rounded-[10px] border-4 border-solid border-black relative shrink-0 select-none transition-all duration-150 ${
+        isDisabled
+          ? "bg-[#FFB59F] opacity-90"
+          : isSelected
+          ? "bg-white cursor-pointer hover:-translate-y-3 hover:scale-[1.02] active:translate-y-0 active:scale-[0.98]"
+          : "bg-[#FFB59F] cursor-pointer hover:-translate-y-3 hover:scale-[1.02] active:translate-y-0 active:scale-[0.98]"
+      } group`}
       style={{ boxShadow: "6px 6px 0px 0px rgba(0,0,0,0.15)" }}
     >
       {/* Card Header Tag */}
-      <div className="flex flex-col items-center py-2 relative self-stretch w-full bg-[#A93710] rounded-[6px] border-b-4 border-solid border-black">
+      <div className={`flex flex-col items-center py-2 relative self-stretch w-full rounded-[6px] border-b-4 border-solid border-black ${isSelected ? "bg-[#E29A2B]" : "bg-[#A93710]"}`}>
         <div className="relative flex items-center justify-center w-fit text-black font-bold text-[12px] tracking-wider uppercase leading-none whitespace-nowrap">
           {title}
         </div>
       </div>
 
       {/* Inner White Box */}
-      <div className="flex-grow w-full p-3 bg-[#FFDED6] rounded-b-[6px] flex items-center justify-center">
-        <div className="w-full h-full bg-white border-4 border-solid border-black p-3.5 flex items-center justify-center text-center">
+      <div className={`flex-grow w-full p-3 rounded-b-[6px] flex items-center justify-center ${isSelected ? "bg-[#FFF4E6]" : "bg-[#FFDED6]"}`}>
+        <div className={`w-full h-full bg-white border-4 border-solid border-black p-3.5 flex flex-col items-center justify-center text-center ${isSelected ? "gap-4" : ""}`}>
           <p className="text-[10px] text-black font-bold tracking-wide leading-relaxed uppercase">
-            {desc}
+            {isDisabled ? "YOU HAVE ALREADY APPLIED FOR A SIMILAR QUEST" : isSelected ? "WANNA RECHECK YOUR GEAR FOR THE QUEST?" : desc}
           </p>
+          
+          {isSelected && progressStatus && (
+            <div className="flex items-center gap-2 mt-2">
+              <span className="bg-[#E29A2B] text-black text-[9px] font-bold px-2 py-1 border-2 border-black uppercase tracking-wider">
+                STATUS
+              </span>
+              <span className="bg-[#52AE26] text-white text-[9px] font-bold px-2 py-1 border-2 border-black uppercase tracking-wider shadow-[2px_2px_0px_#000]">
+                {progressStatus.replace("-", " ")}
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -100,6 +129,7 @@ export default function RecruitmentsPage() {
   const [selectedDepartment, setSelectedDepartment] = useState<DepartmentData | null>(null);
   const [birdScore, setBirdScore] = useState(0);
   const [birdFlap, setBirdFlap] = useState(false);
+  const [isDead, setIsDead] = useState(false);
   const [scale, setScale] = useState(1);
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -111,11 +141,19 @@ export default function RecruitmentsPage() {
   const [scrollX, setScrollX] = useState(0);
   const [isScrollingLeft, setIsScrollingLeft] = useState(false);
 
+  // Application State
+  const [appStatus, setAppStatus] = useState<any>(null);
+  const [isLoadingApp, setIsLoadingApp] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isApplying, setIsApplying] = useState(false);
+
   const birdPhysicsRef = useRef({
     currentX: 0,
     currentY: 0,
     velocityY: 0,
     time: 0,
+    isDead: false,
+    rotation: 0,
   });
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -146,6 +184,34 @@ export default function RecruitmentsPage() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  const fetchStatus = async () => {
+    setIsLoadingApp(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/apply/status?t=${Date.now()}`);
+      if (res.ok) {
+        const data = await res.json();
+        setAppStatus(data.application);
+      } else {
+        if (res.status === 429) {
+          setError("API RATE LIMIT EXCEEDED. PLEASE WAIT A MOMENT AND TRY AGAIN.");
+        } else {
+          setError("FAILED TO CONNECT TO SERVER. PLEASE RETRY.");
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch application status");
+      setError("NETWORK ERROR. PLEASE CHECK YOUR CONNECTION.");
+    } finally {
+      setIsLoadingApp(false);
+    }
+  };
+
+  // Fetch application status
+  useEffect(() => {
+    fetchStatus();
+  }, []);
+
   // Ultra-Smooth GPU Physics Engine for Flappy Bird (native 60/120fps camera follow & jump arcs)
   useEffect(() => {
     let animationFrameId: number;
@@ -161,23 +227,49 @@ export default function RecruitmentsPage() {
 
         // 2. Vertical Floating Breathing Bob & Flapping Jump Physics
         const baseFloatY = Math.sin(p.time) * 11; // Smooth 11px sine wave hover
+        let totalY = baseFloatY + p.currentY;
+        let tiltAngle = Math.max(-25, Math.min(30, p.velocityY * 2));
 
-        if (p.velocityY !== 0 || Math.abs(p.currentY) > 0.05) {
+        if (!p.isDead) {
+          if (p.velocityY !== 0 || Math.abs(p.currentY) > 0.05) {
+            p.currentY += p.velocityY;
+            p.velocityY += 1.15; // Smooth gravity pull
+
+            if (p.currentY >= 0 && p.velocityY > 0) {
+              p.currentY = 0;
+              p.velocityY = 0;
+            }
+          }
+          p.rotation = tiltAngle;
+
+          // Check hit top boundary
+          if (p.currentY < -480) {
+            p.isDead = true;
+            p.velocityY = 0; // stop upward movement
+            setIsDead(true);
+            setBirdScore(0);
+            playRetroSound("die");
+          }
+        } else {
+          // Dying animation
           p.currentY += p.velocityY;
-          p.velocityY += 1.15; // Smooth gravity pull
+          p.velocityY += 1.5; // Fast gravity
+          p.rotation += 15; // Spin out of control
+          totalY = p.currentY; // Ignore sine wave hover when dead
 
-          if (p.currentY >= 0 && p.velocityY > 0) {
+          // Revive when off-screen bottom
+          if (p.currentY > 600) {
+            p.isDead = false;
             p.currentY = 0;
             p.velocityY = 0;
+            p.rotation = 0;
+            setIsDead(false);
           }
         }
 
-        const totalY = baseFloatY + p.currentY;
-        const tiltAngle = Math.max(-25, Math.min(30, p.velocityY * 2));
-
         // Apply direct GPU-accelerated transform without CSS layout thrashing or transition lag
         birdContainerRef.current.style.transform = `translate3d(${p.currentX}px, 0px, 0px)`;
-        birdSpriteRef.current.style.transform = `translate3d(0px, ${totalY}px, 0px) rotate(${tiltAngle}deg)`;
+        birdSpriteRef.current.style.transform = `translate3d(0px, ${totalY}px, 0px) rotate(${p.rotation}deg)`;
       }
 
       animationFrameId = requestAnimationFrame(renderLoop);
@@ -201,23 +293,83 @@ export default function RecruitmentsPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  const handleOpenPopup = (quest: DepartmentData) => {
+  const handleOpenPopup = (quest: DepartmentData, type: "tech" | "non-tech", slug: string) => {
+    if (isLoadingApp) return;
+
+    // Check if they already applied to this department
+    const isFirstPref = appStatus?.firstPreference === slug;
+    const isSecondPref = appStatus?.secondPreference === slug;
+
+    if (isFirstPref || isSecondPref) {
+      playRetroSound("select");
+      const currentStage = isFirstPref ? appStatus.firstPrefProgress.currentStage : appStatus.secondPrefProgress.currentStage;
+      router.push(`/apply/${slug}/stage-${currentStage}`);
+      return;
+    }
+
+    // Check if they are locked out of this type
+    if (appStatus?.firstPreference && appStatus.firstPrefType === type && !isFirstPref) {
+      playRetroSound("die");
+      return; // Disabled
+    }
+    if (appStatus?.secondPreference && appStatus.secondPrefType === type && !isSecondPref) {
+      playRetroSound("die");
+      return; // Disabled
+    }
+
     playRetroSound("open");
     setSelectedDepartment(quest);
   };
 
-  const handleApplyFromPopup = (role: string) => {
+  const handleApplyFromPopup = async (role: string) => {
+    if (isApplying) return;
+    setIsApplying(true);
     playRetroSound("select");
-    router.push(`/?role=${encodeURIComponent(role)}`);
+    
+    try {
+      if (!appStatus) {
+        // Init first preference
+        const res = await fetch("/api/apply/init", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ firstPreference: role }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          router.push(`/apply/${role}/stage-1`);
+        } else {
+          alert(data.error);
+          setIsApplying(false);
+        }
+      } else if (!appStatus.secondPreference) {
+        // Init second preference
+        const res = await fetch("/api/apply/second-pref", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ secondPreference: role }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          router.push(`/apply/${role}/stage-1`);
+        } else {
+          alert(data.error);
+          setIsApplying(false);
+        }
+      }
+    } catch (err) {
+      alert("Something went wrong");
+      setIsApplying(false);
+    }
   };
 
   const handleBirdClick = () => {
+    if (birdPhysicsRef.current.isDead) return;
     playRetroSound("jump");
     setBirdScore((prev) => prev + 1);
     birdPhysicsRef.current.velocityY = -15; // Smooth instant upward jump arc in GPU physics loop
   };
 
-  const playRetroSound = (type: "select" | "jump" | "open" | "close") => {
+  const playRetroSound = (type: "select" | "jump" | "open" | "close" | "die") => {
     if (typeof window === "undefined") return;
     try {
       const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
@@ -258,6 +410,14 @@ export default function RecruitmentsPage() {
         gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.25);
         osc.start();
         osc.stop(ctx.currentTime + 0.25);
+      } else if (type === "die") {
+        osc.type = "sawtooth";
+        osc.frequency.setValueAtTime(150, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.4);
+        gain.gain.setValueAtTime(0.1, ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.4);
       }
     } catch (e) {
       console.warn("Audio Context failed", e);
@@ -366,6 +526,40 @@ export default function RecruitmentsPage() {
       ref={scrollContainerRef}
       onScroll={handleScroll}
     >
+      {error && (
+        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center p-4">
+          <div className="bg-[#FFE4D6] border-4 border-black p-8 max-w-lg w-full relative flex flex-col items-center gap-6" style={{ boxShadow: "8px 8px 0px 0px rgba(0,0,0,0.5)" }}>
+            <div className="absolute top-0 left-0 w-full h-1 bg-white/50" />
+            
+            <div className="bg-[#A93710] text-white px-4 py-2 border-2 border-black text-[12px] uppercase tracking-widest font-bold -mt-12 mb-2" style={{ boxShadow: "4px 4px 0px 0px #000" }}>
+              CONNECTION ERROR
+            </div>
+
+            <div className="text-[#A93710] text-[12px] sm:text-[14px] text-center leading-loose uppercase tracking-widest font-bold">
+              {error}
+            </div>
+
+            <button 
+              onClick={() => fetchStatus()}
+              className="mt-2 bg-[#E29A2B] hover:bg-[#F0AD3D] border-4 border-black py-3 px-8 text-[12px] font-bold text-black uppercase tracking-wider active:scale-95 transition-transform"
+              style={{ boxShadow: "4px 4px 0px 0px #000" }}
+            >
+              RETRY CONNECTION
+            </button>
+          </div>
+        </div>
+      )}
+
+      {!error && isLoadingApp && (
+        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center">
+          <div className="bg-[#B87B21] border-4 border-black p-6 flex items-center justify-center" style={{ boxShadow: "6px 6px 0px 0px #000" }}>
+            <div className="text-white text-[14px] animate-retro-blink uppercase tracking-widest drop-shadow-[2px_2px_0px_#000]">
+              LOADING MAP...
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Sized container to calculate correct scroll boundaries post-scaling */}
       <div
         style={{
@@ -473,7 +667,7 @@ export default function RecruitmentsPage() {
           {/* ================= FIXED FLOATING CONTROLS (z-30) ================= */}
           {/* MIC Logo (Standalone without background or text, slightly reduced size) */}
           <img
-            src="/mic_logo_pixel.svg"
+            src="/mic_logo_pixel.png"
             alt="MIC Logo"
             className="absolute z-30 pixelated select-none pointer-events-none"
             style={{ left: "64px", top: "24px", width: "110px", height: "79px" }}
@@ -523,12 +717,14 @@ export default function RecruitmentsPage() {
               <img
                 src="/flappy_bird.svg"
                 alt="Flappy Bird"
-                className={`w-[72px] h-[72px] pixelated drop-shadow-[3px_3px_0px_rgba(0,0,0,0.3)] hover:scale-110 active:scale-95 transition-[transform,filter] duration-150 select-none pointer-events-none ${isScrollingLeft ? "scale-x-[-1]" : "scale-x-[1]"}`}
+                className={`w-[72px] h-[72px] pixelated drop-shadow-[3px_3px_0px_rgba(0,0,0,0.3)] transition-[transform,filter] duration-150 select-none pointer-events-none ${isScrollingLeft ? "scale-x-[-1]" : "scale-x-[1]"} ${isDead ? "grayscale brightness-50" : "hover:scale-110 active:scale-95"}`}
               />
             </div>
-            <div className="bg-black/80 text-[7px] text-white px-1.5 py-0.5 border border-black rounded-sm text-center -mt-2 animate-pulse whitespace-nowrap text-[8px] uppercase select-none pointer-events-none">
-              TAP BIRD!
-            </div>
+            {!isDead && (
+              <div className="bg-black/80 text-[7px] text-white px-1.5 py-0.5 border border-black rounded-sm text-center -mt-2 animate-pulse whitespace-nowrap text-[8px] uppercase select-none pointer-events-none">
+                TAP BIRD!
+              </div>
+            )}
           </div>
 
           {/* ================= TECH ROW ================= */}
@@ -548,6 +744,21 @@ export default function RecruitmentsPage() {
           {/* Tech Cards (Centered perfectly between exact Figma pipes without overlaps) */}
           {techQuests.map((q, idx) => {
             const leftPositions = [350, 830, 1319, 1809, 2300];
+            const slug = ROLE_TO_SLUG[q.role] ?? q.role.toLowerCase().replace(/\s+/g, "-");
+            
+            let state: "available" | "selected" | "disabled" = "available";
+            let progressStatus = undefined;
+
+            if (appStatus?.firstPreference === slug) {
+              state = "selected";
+              progressStatus = appStatus.firstPrefProgress.status;
+            } else if (appStatus?.secondPreference === slug) {
+              state = "selected";
+              progressStatus = appStatus.secondPrefProgress.status;
+            } else if (appStatus?.firstPrefType === "tech" || appStatus?.secondPrefType === "tech") {
+              state = "disabled";
+            }
+
             return (
               <div
                 key={`tech-card-${idx}`}
@@ -558,7 +769,9 @@ export default function RecruitmentsPage() {
                   title={q.title}
                   desc={q.desc || q.subtitle}
                   role={q.role}
-                  onSelect={() => handleOpenPopup(q)}
+                  state={state}
+                  progressStatus={progressStatus}
+                  onSelect={() => handleOpenPopup(q, "tech", slug)}
                 />
               </div>
             );
@@ -581,6 +794,21 @@ export default function RecruitmentsPage() {
           {/* Non-Tech Cards (Centered perfectly between exact Figma pipes without overlaps) */}
           {nonTechQuests.map((q, idx) => {
             const leftPositions = [450, 993, 1481, 1970];
+            const slug = ROLE_TO_SLUG[q.role] ?? q.role.toLowerCase().replace(/\s+/g, "-");
+
+            let state: "available" | "selected" | "disabled" = "available";
+            let progressStatus = undefined;
+
+            if (appStatus?.firstPreference === slug) {
+              state = "selected";
+              progressStatus = appStatus.firstPrefProgress.status;
+            } else if (appStatus?.secondPreference === slug) {
+              state = "selected";
+              progressStatus = appStatus.secondPrefProgress.status;
+            } else if (appStatus?.firstPrefType === "non-tech" || appStatus?.secondPrefType === "non-tech") {
+              state = "disabled";
+            }
+
             return (
               <div
                 key={`nontech-card-${idx}`}
@@ -591,7 +819,9 @@ export default function RecruitmentsPage() {
                   title={q.title}
                   desc={q.desc || q.subtitle}
                   role={q.role}
-                  onSelect={() => handleOpenPopup(q)}
+                  state={state}
+                  progressStatus={progressStatus}
+                  onSelect={() => handleOpenPopup(q, "non-tech", slug)}
                 />
               </div>
             );

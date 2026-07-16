@@ -13,6 +13,19 @@ export interface DepartmentData {
   desc?: string;
 }
 
+// Map from role name (used in existing data) to new dept slug
+const ROLE_TO_SLUG: Record<string, string> = {
+  Development: "development",
+  "Competitive Coding": "competitive-coding",
+  "UI/UX": "ui-ux",
+  "AI/ML": "ai-ml",
+  "Cyber Security": "cyber-security",
+  Design: "design",
+  Management: "management",
+  Entrepreneurship: "entrepreneurship",
+  "Content & Media": "content-media",
+};
+
 interface DepartmentPopupProps {
   department: DepartmentData | null;
   onClose: () => void;
@@ -215,7 +228,10 @@ export default function DepartmentPopup({
                 WANNA JOIN US IN COMPLETING THIS QUEST?
               </p>
               <button
-                onClick={() => onApply(department.role)}
+                onClick={() => {
+                  const slug = ROLE_TO_SLUG[department.role] ?? department.role.toLowerCase().replace(/\s+/g, "-");
+                  onApply(slug);
+                }}
                 className="w-full sm:w-auto bg-[#E29A2B] hover:bg-[#F0AD3D] active:scale-95 border-2 sm:border-4 border-black py-2.5 px-4 sm:py-3 sm:px-6 text-[9px] sm:text-[10px] font-bold text-black uppercase tracking-wider cursor-pointer whitespace-nowrap transition-all"
                 style={{ boxShadow: "3px 3px 0px 0px #000" }}
               >

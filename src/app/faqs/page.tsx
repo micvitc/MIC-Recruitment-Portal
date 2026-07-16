@@ -187,7 +187,7 @@ export default function FaqsPage() {
       {/* ================= TOP LEFT LOGO ================= */}
       <div className="absolute left-6 top-6 z-30 flex items-center gap-3">
         <img
-          src="/mic_logo_pixel.svg"
+          src="/mic_logo_pixel.png"
           alt="MIC Logo"
           className="w-[85px] h-[61px] md:w-[110px] md:h-[79px] pixelated pointer-events-none"
         />
