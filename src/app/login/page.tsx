@@ -160,7 +160,7 @@ export default function LoginPage() {
                     {Array(6).fill("MICROSOFT INNOVATIONS CLUB TENURE 2026-2027").map((text, idx) => (
                       <React.Fragment key={idx}>
                         <span>{text}</span>
-                        <img src="/mic_logo_pixel.svg" alt="MIC" className="w-8 h-8 md:w-10 md:h-10 mx-8 shrink-0" />
+                        <img src="/mic_logo_pixel.png" alt="MIC" className="w-8 h-8 md:w-10 md:h-10 mx-8 shrink-0" />
                       </React.Fragment>
                     ))}
                   </span>
@@ -168,7 +168,7 @@ export default function LoginPage() {
                     {Array(6).fill("MICROSOFT INNOVATIONS CLUB TENURE 2026-2027").map((text, idx) => (
                       <React.Fragment key={idx}>
                         <span>{text}</span>
-                        <img src="/mic_logo_pixel.svg" alt="MIC" className="w-8 h-8 md:w-10 md:h-10 mx-8 shrink-0" />
+                        <img src="/mic_logo_pixel.png" alt="MIC" className="w-8 h-8 md:w-10 md:h-10 mx-8 shrink-0" />
                       </React.Fragment>
                     ))}
                   </span>
