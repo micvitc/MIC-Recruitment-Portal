@@ -470,7 +470,7 @@ export default function ApplicantDetailPage({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-[100dvh] bg-black flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-10 w-10 text-teal-400 animate-spin" />
           <p className="text-sm text-zinc-400 font-medium">Loading details...</p>
@@ -481,7 +481,7 @@ export default function ApplicantDetailPage({
 
   if (!application) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-[100dvh] bg-black flex items-center justify-center">
         <Card className="max-w-xs text-center p-6 border-zinc-900 space-y-4 bg-zinc-950">
           <AlertTriangle className="h-12 w-12 text-amber-500 mx-auto" />
           <h2 className="text-lg font-bold text-white">Application Not Found</h2>

@@ -7,6 +7,7 @@ import { Loader2, CheckCircle2, AlertTriangle, Send, Edit3, PlayCircle, Github, 
 import type { FormField, StageConfig } from "@/models/Department";
 import TurnstileWidget from "@/components/TurnstileWidget";
 import posthog from "posthog-js";
+import BackButton from "@/components/BackButton";
 
 const pressStart = Press_Start_2P({
   weight: "400",
@@ -40,16 +41,19 @@ interface ApplicationStatus {
 
 function RetroPipe({ height, top, left, isTop }: { height: number; top: string; left: string; isTop: boolean }) {
   return (
-    <img
-      src="/green_pipe.svg"
-      alt="Pipe"
+    <div
       className="absolute select-none pointer-events-none z-10 w-[52px] pixelated"
       style={{
         left,
         top,
         height: `${height}px`,
         transform: isTop ? "none" : "scaleY(-1)",
-        objectFit: "fill",
+        borderStyle: "solid",
+        borderWidth: "0 0 24px 0",
+        borderColor: "transparent",
+        borderImageSource: "url(/green_pipe.png)",
+        borderImageSlice: "0 0 64 0 fill",
+        borderImageRepeat: "stretch",
       }}
     />
   );
@@ -511,7 +515,7 @@ export default function StagePage({
 
   if (loading) {
     return (
-      <div className={`${pressStart.variable} font-press-start min-h-screen bg-[#DD9955] flex flex-col items-center justify-center`}>
+      <div className={`${pressStart.variable} font-press-start min-h-[100dvh] bg-[#DD9955] flex flex-col items-center justify-center`}>
         <div className="text-white text-[14px] animate-retro-blink uppercase tracking-widest drop-shadow-[2px_2px_0px_#000]">
           LOADING STAGE...
         </div>
@@ -521,7 +525,7 @@ export default function StagePage({
 
   if (!stageConfig) {
     return (
-      <main className={`${pressStart.variable} font-press-start w-full h-screen overflow-hidden select-none bg-[#DD9955] relative flex justify-center items-center`}>
+      <main className={`${pressStart.variable} font-press-start w-full h-[100dvh] overflow-hidden select-none bg-[#DD9955] relative flex justify-center items-center`}>
         <RetroBackground scale={scale} />
         <div className="relative z-40 w-full max-w-[650px] px-4 animate-pixel-slide-up">
           <div className="bg-[#FFE4D6] border-4 border-black rounded-[12px] relative flex flex-col" style={{ boxShadow: "8px 8px 0px 0px rgba(0,0,0,0.5)" }}>
@@ -552,7 +556,7 @@ export default function StagePage({
 
   if (submitted) {
     return (
-      <main className={`${pressStart.variable} font-press-start w-full h-screen overflow-hidden select-none bg-[#DD9955] relative flex justify-center items-center`}>
+      <main className={`${pressStart.variable} font-press-start w-full h-[100dvh] overflow-hidden select-none bg-[#DD9955] relative flex justify-center items-center`}>
         <RetroBackground scale={scale} />
         
         <div className="relative z-40 w-full max-w-[650px] px-4 animate-pixel-slide-up" style={{ marginTop: "40px" }}>
@@ -598,16 +602,10 @@ export default function StagePage({
   }
 
   return (
-    <div className={`${pressStart.variable} font-press-start w-full h-screen overflow-hidden bg-[#DD9955] relative flex justify-center items-center`}>
+    <div className={`${pressStart.variable} font-press-start w-full h-[100dvh] overflow-hidden bg-[#DD9955] relative flex justify-center items-center`}>
       <RetroBackground scale={scale} />
 
-      {/* Back Button (Floating left) */}
-      <button
-        onClick={() => { playRetroSound(); stageNum > 1 ? router.push(`/apply/${dept}/stage-${stageNum - 1}`) : router.push("/recruitments"); }}
-        className="absolute left-4 top-1/2 -translate-y-1/2 md:left-12 z-50 w-12 h-12 rounded-full bg-slate-300 border-4 border-black shadow-[4px_4px_0px_#000] flex items-center justify-center hover:bg-white hover:scale-105 active:scale-95 transition-all"
-      >
-        <div className="w-0 h-0 border-t-[8px] border-t-transparent border-r-[12px] border-r-black border-b-[8px] border-b-transparent mr-1" />
-      </button>
+      <BackButton onClick={() => { stageNum > 1 ? router.push(`/apply/${dept}/stage-${stageNum - 1}`) : router.push("/recruitments"); }} />
 
       {/* Main Hanging Signboard */}
       <div className="relative z-40 w-full max-w-[1000px] px-4 md:px-16 animate-pixel-slide-up" style={{ marginTop: "40px" }}>

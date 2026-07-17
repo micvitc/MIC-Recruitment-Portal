@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Press_Start_2P } from "next/font/google";
 import RetroLoader from "@/components/RetroLoader";
+import MicLogo from "@/components/MicLogo";
 
 const pressStart = Press_Start_2P({
   weight: "400",
@@ -23,16 +24,19 @@ interface PageConfig {
 
 function RetroPipe({ height, top, left, isTop }: { height: number; top: string; left: string; isTop: boolean }) {
   return (
-    <img
-      src="/green_pipe.svg"
-      alt="Pipe"
-      className="absolute select-none pointer-events-none z-10 w-[52px] pixelated"
+    <div
+      className="absolute select-none pointer-events-none z-30 w-[52px] pixelated"
       style={{
         left,
         top,
         height: `${height}px`,
         transform: isTop ? "none" : "scaleY(-1)",
-        objectFit: "fill",
+        borderStyle: "solid",
+        borderWidth: "0 0 24px 0",
+        borderColor: "transparent",
+        borderImageSource: "url(/green_pipe.png)",
+        borderImageSlice: "0 0 64 0 fill",
+        borderImageRepeat: "stretch",
       }}
     />
   );
@@ -112,7 +116,7 @@ export default function Homepage() {
     <>
       <RetroLoader isLoading={isLoading} title="BOOTING THE QUEST" />
 
-      <div className={`${pressStart.variable} font-press-start w-full h-screen overflow-hidden select-none bg-[#DD9955] relative flex justify-center items-center`}>
+      <div className={`${pressStart.variable} font-press-start w-full h-[100dvh] overflow-hidden select-none bg-[#DD9955] relative flex justify-center items-center`}>
         {/* Absolute positioned scaled background container centered horizontally */}
         <div
           className="absolute top-0 left-1/2 -translate-x-1/2"
@@ -148,15 +152,20 @@ export default function Homepage() {
             ))}
 
             {/* Green Bushes */}
-            <img src="/bushes_pixel.svg" alt="Bushes Left" className="absolute top-[739px] left-0 w-[1456px] h-[200px] z-4 pointer-events-none select-none pixelated" />
-            <img src="/bushes_pixel.svg" alt="Bushes Right" className="absolute top-[739px] left-[1454px] w-[1456px] h-[200px] z-4 pointer-events-none select-none pixelated" />
+            {Array.from({ length: 3 }).map((_, idx) => (
+              <img
+                key={`bush-${idx}`}
+                src="/bushes_pixel.svg"
+                alt={`Bushes ${idx}`}
+                className="absolute top-[739px] w-[1456px] h-[200px] z-4 pointer-events-none select-none pixelated"
+                style={{ left: `${idx * 1409}px` }}
+              />
+            ))}
 
             {/* Green Pipes framing the center (Aligned vertically to hold the signboard) */}
             <RetroPipe left="900px" top="-5px" height={250} isTop={true} />
             <RetroPipe left="1900px" top="-5px" height={250} isTop={true} />
             
-            <RetroPipe left="900px" top="730px" height={200} isTop={false} />
-            <RetroPipe left="1900px" top="730px" height={200} isTop={false} />
 
             {/* Main Hero Center Box (Inside Scaled Canvas so it perfectly aligns with the pipes) */}
             <div className="absolute z-40 animate-pixel-slide-up" style={{ top: "170px", left: "860px", width: "1132px" }}>
@@ -244,11 +253,21 @@ export default function Homepage() {
               </div>
               <div className="w-full flex-grow bg-[#DD9955] border-b-4 border-black relative overflow-hidden flex items-start pt-3">
                 <div className="flex whitespace-nowrap animate-marquee">
-                  <span className="inline-block text-[24px] text-[#CC7700] tracking-wider uppercase font-bold pr-10">
-                    {Array(6).fill(pageConfig?.marqueeText || "MICROSOFT INNOVATIONS CLUB TENURE 2026-2027").join("  ★  ")}
+                  <span className="inline-flex items-center shrink-0 text-[24px] text-[#CC7700] tracking-wider uppercase font-bold">
+                    {Array(6).fill(pageConfig?.marqueeText || "MICROSOFT INNOVATIONS CLUB TENURE 2026-2027").map((text, idx) => (
+                      <React.Fragment key={idx}>
+                        <span>{text}</span>
+                        <img src="/mic_logo_pixel.png" alt="MIC" className="w-8 h-8 md:w-10 md:h-10 mx-8 shrink-0" />
+                      </React.Fragment>
+                    ))}
                   </span>
-                  <span className="inline-block text-[24px] text-[#CC7700] tracking-wider uppercase font-bold pr-10">
-                    {Array(6).fill(pageConfig?.marqueeText || "MICROSOFT INNOVATIONS CLUB TENURE 2026-2027").join("  ★  ")}
+                  <span className="inline-flex items-center shrink-0 text-[24px] text-[#CC7700] tracking-wider uppercase font-bold">
+                    {Array(6).fill(pageConfig?.marqueeText || "MICROSOFT INNOVATIONS CLUB TENURE 2026-2027").map((text, idx) => (
+                      <React.Fragment key={idx}>
+                        <span>{text}</span>
+                        <img src="/mic_logo_pixel.png" alt="MIC" className="w-8 h-8 md:w-10 md:h-10 mx-8 shrink-0" />
+                      </React.Fragment>
+                    ))}
                   </span>
                 </div>
               </div>
@@ -257,9 +276,7 @@ export default function Homepage() {
         </div>
 
         {/* Static Header Elements */}
-        <div className="absolute top-6 left-8 z-30">
-          <img src="/mic_logo_pixel.png" alt="MIC Logo" className="pixelated w-[110px] h-[79px] select-none pointer-events-none hover:animate-retro-shake" />
-        </div>
+        <MicLogo />
 
         <div className="absolute top-8 right-8 z-30">
           <button

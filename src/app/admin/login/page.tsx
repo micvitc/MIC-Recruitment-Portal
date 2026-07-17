@@ -24,14 +24,14 @@ export default function AdminLoginPage() {
 
   if (checking) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+      <div className="min-h-[100dvh] bg-slate-950 flex items-center justify-center">
         <Loader2 className="h-8 w-8 text-teal-400 animate-spin" />
       </div>
     );
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
+    <main className="min-h-[100dvh] bg-slate-950 flex items-center justify-center p-6">
       <div className="max-w-sm w-full text-center space-y-6">
         <div className="h-16 w-16 mx-auto rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center">
           <ShieldCheck className="h-8 w-8 text-teal-400" />

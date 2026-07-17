@@ -9,6 +9,8 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from "@/components/ui/accordion";
+import MicLogo from "@/components/MicLogo";
+import BackButton from "@/components/BackButton";
 
 const pressStart = Press_Start_2P({
   weight: "400",
@@ -89,7 +91,7 @@ export default function FaqsPage() {
 
   return (
     <main
-      className={`${pressStart.variable} font-press-start relative min-h-screen w-full flex flex-col items-center justify-center p-4 select-none overflow-hidden bg-[linear-gradient(180deg,#1188EE_0%,#0E8AEA_25%,#1093EB_35%,#1197EC_46%,#16B6F4_52%,#10CBF1_56%,#0FC6F1_60%,#15DEF0_65%,#15DEF0_81%)]`}
+      className={`${pressStart.variable} font-press-start relative min-h-[100dvh] w-full flex flex-col items-center justify-center p-4 select-none overflow-hidden bg-[linear-gradient(180deg,#1188EE_0%,#0E8AEA_25%,#1093EB_35%,#1197EC_46%,#16B6F4_52%,#10CBF1_56%,#0FC6F1_60%,#15DEF0_65%,#15DEF0_81%)]`}
     >
       {/* ================= BACKGROUND SKY & CLOUDS ================= */}
       <img
@@ -176,24 +178,30 @@ export default function FaqsPage() {
         {/* Soil Base with Marquee Text */}
         <div className="w-full flex-grow bg-[#DD9955] border-b-4 border-black relative overflow-hidden flex items-center">
           <div className="flex whitespace-nowrap animate-marquee">
-            <span className="inline-block text-[18px] md:text-[22px] text-[#CC7700] tracking-wider uppercase font-bold pr-10">
-              {Array(6).fill("MICROSOFT INNOVATIONS CLUB TENURE 2026-2027").join("  ★  ")}
+            <span className="inline-flex items-center shrink-0 text-[24px] text-[#CC7700] tracking-wider uppercase font-bold">
+              {Array(6).fill("MICROSOFT INNOVATIONS CLUB TENURE 2026-2027").map((text, idx) => (
+                <React.Fragment key={idx}>
+                  <span>{text}</span>
+                  <img src="/mic_logo_pixel.png" alt="MIC" className="w-8 h-8 md:w-10 md:h-10 mx-8 shrink-0" />
+                </React.Fragment>
+              ))}
             </span>
-            <span className="inline-block text-[18px] md:text-[22px] text-[#CC7700] tracking-wider uppercase font-bold pr-10">
-              {Array(6).fill("MICROSOFT INNOVATIONS CLUB TENURE 2026-2027").join("  ★  ")}
+            <span className="inline-flex items-center shrink-0 text-[24px] text-[#CC7700] tracking-wider uppercase font-bold">
+              {Array(6).fill("MICROSOFT INNOVATIONS CLUB TENURE 2026-2027").map((text, idx) => (
+                <React.Fragment key={idx}>
+                  <span>{text}</span>
+                  <img src="/mic_logo_pixel.png" alt="MIC" className="w-8 h-8 md:w-10 md:h-10 mx-8 shrink-0" />
+                </React.Fragment>
+              ))}
             </span>
           </div>
         </div>
       </div>
 
       {/* ================= TOP LEFT LOGO ================= */}
-      <div className="absolute left-6 top-6 z-30 flex items-center gap-3">
-        <img
-          src="/mic_logo_pixel.png"
-          alt="MIC Logo"
-          className="w-[85px] h-[61px] md:w-[110px] md:h-[79px] pixelated pointer-events-none"
-        />
-      </div>
+      <MicLogo />
+      
+      <BackButton onClick={() => router.push("/recruitments")} />
 
       {/* ================= TOP RIGHT CLOSE BUTTON (Close_icon.svg) ================= */}
       <button

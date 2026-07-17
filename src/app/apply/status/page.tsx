@@ -213,7 +213,7 @@ export default function ApplicationStatusPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+      <div className="min-h-[100dvh] bg-slate-950 flex items-center justify-center">
         <Loader2 className="h-8 w-8 text-teal-400 animate-spin" />
       </div>
     );
@@ -221,7 +221,7 @@ export default function ApplicationStatusPage() {
 
   if (!application) {
     return (
-      <main className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
+      <main className="min-h-[100dvh] bg-slate-950 flex items-center justify-center p-6">
         <div className="max-w-sm w-full text-center space-y-6">
           <AlertTriangle className="h-12 w-12 text-amber-400 mx-auto" />
           <h1 className="text-xl font-bold text-white">No Application Found</h1>
@@ -238,7 +238,7 @@ export default function ApplicationStatusPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black p-4 md:p-8">
+    <main className="min-h-[100dvh] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black p-4 md:p-8">
       <div className="fixed top-0 right-1/3 -z-10 h-96 w-96 rounded-full bg-teal-500/6 blur-[120px]" />
 
       <div className="max-w-2xl mx-auto space-y-6">
