@@ -27,8 +27,8 @@ function RetroPipe({ height, top, left, isTop }: { height: number; top: string; 
         borderStyle: "solid",
         borderWidth: "0 0 24px 0",
         borderColor: "transparent",
-        borderImageSource: "url(/green_pipe.svg)",
-        borderImageSlice: "0 0 24 0 fill",
+        borderImageSource: "url(/green_pipe.png)",
+        borderImageSlice: "0 0 64 0 fill",
         borderImageRepeat: "stretch",
       }}
     />
@@ -147,8 +147,7 @@ export default function LoginPage() {
 
           <RetroPipe left="1156px" top="-5px" height={400} isTop={true} />
           <RetroPipe left="1656px" top="-5px" height={400} isTop={true} />
-          <RetroPipe left="1100px" top="650px" height={200} isTop={false} />
-          <RetroPipe left="1700px" top="600px" height={250} isTop={false} />
+          
 
           <div className="absolute top-[925px] left-0 w-full h-[300px] z-25 flex flex-col select-none pointer-events-none">
             <div className="w-full h-5 bg-[#52AE26] border-t-4 border-b-4 border-black flex flex-col justify-between shrink-0">

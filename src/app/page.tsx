@@ -25,7 +25,7 @@ interface PageConfig {
 function RetroPipe({ height, top, left, isTop }: { height: number; top: string; left: string; isTop: boolean }) {
   return (
     <div
-      className="absolute select-none pointer-events-none z-10 w-[52px] pixelated"
+      className="absolute select-none pointer-events-none z-30 w-[52px] pixelated"
       style={{
         left,
         top,
@@ -34,8 +34,8 @@ function RetroPipe({ height, top, left, isTop }: { height: number; top: string; 
         borderStyle: "solid",
         borderWidth: "0 0 24px 0",
         borderColor: "transparent",
-        borderImageSource: "url(/green_pipe.svg)",
-        borderImageSlice: "0 0 24 0 fill",
+        borderImageSource: "url(/green_pipe.png)",
+        borderImageSlice: "0 0 64 0 fill",
         borderImageRepeat: "stretch",
       }}
     />
@@ -166,8 +166,6 @@ export default function Homepage() {
             <RetroPipe left="900px" top="-5px" height={250} isTop={true} />
             <RetroPipe left="1900px" top="-5px" height={250} isTop={true} />
             
-            <RetroPipe left="900px" top="730px" height={200} isTop={false} />
-            <RetroPipe left="1900px" top="730px" height={200} isTop={false} />
 
             {/* Main Hero Center Box (Inside Scaled Canvas so it perfectly aligns with the pipes) */}
             <div className="absolute z-40 animate-pixel-slide-up" style={{ top: "170px", left: "860px", width: "1132px" }}>
