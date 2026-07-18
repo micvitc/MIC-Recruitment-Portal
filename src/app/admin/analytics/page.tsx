@@ -73,11 +73,7 @@ interface DeptStats {
   firstPrefCount: number;
   secondPrefCount: number;
   acceptedCount: number;
-  avgScores: {
-    technical: number;
-    communication: number;
-    creativity: number;
-  };
+  avgScores: Record<string, number>;
   stagesFunnel: Array<{ stageNum: number; count: number }>;
   yearDistribution: Array<{ year: string; count: number }>;
 }
@@ -503,24 +499,26 @@ export default function AdvancedAnalyticsPage() {
                   <Award className="h-4 w-4 text-teal-400" /> Average Evaluation Scores
                 </h3>
                 <div className="p-4 rounded-xl border border-zinc-900 bg-zinc-950/60 space-y-4">
-                  {[
-                    { label: "Technical Ability", value: deptStats.avgScores.technical, color: "bg-teal-500" },
-                    { label: "Communication Skills", value: deptStats.avgScores.communication, color: "bg-violet-500" },
-                    { label: "Creativity & Devotion", value: deptStats.avgScores.creativity, color: "bg-amber-500" },
-                  ].map((metric) => (
-                    <div key={metric.label} className="space-y-1.5">
-                      <div className="flex items-center justify-between text-xs font-semibold text-zinc-300">
-                        <span>{metric.label}</span>
-                        <span className="text-white font-extrabold">{metric.value} / 5</span>
+                  {!deptStats.avgScores || Object.keys(deptStats.avgScores).length === 0 ? (
+                    <p className="text-xs text-zinc-600 font-medium text-center py-4 font-mono">
+                      No scorecard metrics evaluated yet.
+                    </p>
+                  ) : (
+                    Object.entries(deptStats.avgScores).map(([metric, value]) => (
+                      <div key={metric} className="space-y-1.5 font-mono">
+                        <div className="flex items-center justify-between text-xs font-semibold text-zinc-300">
+                          <span className="capitalize">{metric}</span>
+                          <span className="text-white font-extrabold">{value} / 5</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-black rounded-full overflow-hidden">
+                          <div
+                            style={{ width: `${(value / 5) * 100}%` }}
+                            className="h-full rounded-full bg-teal-500"
+                          />
+                        </div>
                       </div>
-                      <div className="h-1.5 w-full bg-black rounded-full overflow-hidden">
-                        <div
-                          style={{ width: `${(metric.value / 5) * 100}%` }}
-                          className={`h-full rounded-full ${metric.color}`}
-                        />
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
 
