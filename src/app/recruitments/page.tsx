@@ -762,28 +762,43 @@ export default function RecruitmentsPage() {
             style={{ 
               left: "64px", 
               top: "313px", 
-              width: "276px", 
-              height: "80px",
-              filter: "drop-shadow(6px 6px 0px #000)"
+              width: "282px", 
+              height: "86px"
             }}
           >
-            {/* Outer border shape */}
+            {/* Shadow shape */}
             <div 
-              className="absolute inset-0 bg-black"
+              className="absolute bg-black"
               style={{
+                left: "6px",
+                top: "6px",
+                width: "276px",
+                height: "80px",
                 clipPath: "polygon(0 0, calc(100% - 24px) 0, 100% 50%, calc(100% - 24px) 100%, 0 100%)"
               }}
             />
-            {/* Inner background shape */}
+            {/* Main shape container */}
             <div 
-              className="absolute top-1 left-1 bottom-1 right-1 bg-[#B87B21] flex items-center justify-center pr-10"
-              style={{
-                clipPath: "polygon(0 0, calc(100% - 20px) 0, 100% 50%, calc(100% - 20px) 100%, 0 100%)"
-              }}
+              className="absolute top-0 left-0 w-[276px] h-[80px]"
             >
-              <span className="text-black text-[22px] font-bold tracking-wider">
-                Tech
-              </span>
+              {/* Outer border shape */}
+              <div 
+                className="absolute inset-0 bg-black"
+                style={{
+                  clipPath: "polygon(0 0, calc(100% - 24px) 0, 100% 50%, calc(100% - 24px) 100%, 0 100%)"
+                }}
+              />
+              {/* Inner background shape */}
+              <div 
+                className="absolute top-1 left-1 bottom-1 right-1 bg-[#B87B21] flex items-center justify-center pr-10"
+                style={{
+                  clipPath: "polygon(0 0, calc(100% - 20px) 0, 100% 50%, calc(100% - 20px) 100%, 0 100%)"
+                }}
+              >
+                <span className="text-black text-[22px] font-bold tracking-wider">
+                  Tech
+                </span>
+              </div>
             </div>
           </div>
 
@@ -830,28 +845,43 @@ export default function RecruitmentsPage() {
             style={{ 
               left: "64px", 
               top: "588px", 
-              width: "366px", 
-              height: "80px",
-              filter: "drop-shadow(6px 6px 0px #000)"
+              width: "372px", 
+              height: "86px"
             }}
           >
-            {/* Outer border shape */}
+            {/* Shadow shape */}
             <div 
-              className="absolute inset-0 bg-black"
+              className="absolute bg-black"
               style={{
+                left: "6px",
+                top: "6px",
+                width: "366px",
+                height: "80px",
                 clipPath: "polygon(0 0, calc(100% - 24px) 0, 100% 50%, calc(100% - 24px) 100%, 0 100%)"
               }}
             />
-            {/* Inner background shape */}
+            {/* Main shape container */}
             <div 
-              className="absolute top-1 left-1 bottom-1 right-1 bg-[#B87B21] flex items-center justify-center pr-10"
-              style={{
-                clipPath: "polygon(0 0, calc(100% - 20px) 0, 100% 50%, calc(100% - 20px) 100%, 0 100%)"
-              }}
+              className="absolute top-0 left-0 w-[366px] h-[80px]"
             >
-              <span className="text-black text-[22px] font-bold tracking-wider">
-                Non Tech
-              </span>
+              {/* Outer border shape */}
+              <div 
+                className="absolute inset-0 bg-black"
+                style={{
+                  clipPath: "polygon(0 0, calc(100% - 24px) 0, 100% 50%, calc(100% - 24px) 100%, 0 100%)"
+                }}
+              />
+              {/* Inner background shape */}
+              <div 
+                className="absolute top-1 left-1 bottom-1 right-1 bg-[#B87B21] flex items-center justify-center pr-10"
+                style={{
+                  clipPath: "polygon(0 0, calc(100% - 20px) 0, 100% 50%, calc(100% - 20px) 100%, 0 100%)"
+                }}
+              >
+                <span className="text-black text-[22px] font-bold tracking-wider">
+                  Non Tech
+                </span>
+              </div>
             </div>
           </div>
 
