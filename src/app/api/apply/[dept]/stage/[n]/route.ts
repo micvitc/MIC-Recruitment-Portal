@@ -117,7 +117,8 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     await dbConnect();
 
     const cycle = await RecruitmentCycle.findOne({ cycleId: CYCLE_ID });
-    if (!cycle?.isOpen) {
+    const { isCycleOpen } = await import("@/lib/cycle");
+    if (!isCycleOpen(cycle)) {
       return NextResponse.json(
         { success: false, error: "Recruitment is currently closed." },
         { status: 403 }
@@ -262,7 +263,8 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     await dbConnect();
 
     const cycle = await RecruitmentCycle.findOne({ cycleId: CYCLE_ID });
-    if (!cycle?.isOpen) {
+    const { isCycleOpen } = await import("@/lib/cycle");
+    if (!isCycleOpen(cycle)) {
       return NextResponse.json(
         { success: false, error: "Recruitment is closed. Editing is no longer available." },
         { status: 403 }

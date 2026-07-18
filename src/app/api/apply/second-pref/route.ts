@@ -31,7 +31,8 @@ export async function POST(req: NextRequest) {
 
     // Check recruitment is open
     const cycle = await RecruitmentCycle.findOne({ cycleId: CYCLE_ID });
-    if (!cycle?.isOpen) {
+    const { isCycleOpen } = await import("@/lib/cycle");
+    if (!isCycleOpen(cycle)) {
       return NextResponse.json(
         { success: false, error: "Recruitment is currently closed." },
         { status: 403 }

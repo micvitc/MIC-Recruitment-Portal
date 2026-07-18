@@ -20,6 +20,13 @@ export type OverallStatus =
   | "waitlisted";
 export type PrefStatus = "active" | "passed" | "rejected" | "pending";
 
+export interface IPanelistScore {
+  interviewerEmail: string;
+  scores: Record<string, number>;
+  note?: string;
+  createdAt: Date;
+}
+
 export interface StageSubmission {
   stage: number;
   submittedAt: Date;
@@ -29,6 +36,7 @@ export interface StageSubmission {
   reviewedBy?: string;
   reviewedAt?: Date;
   result: StageResult;
+  panelistScores?: IPanelistScore[];
 }
 
 export interface PrefProgress {
@@ -63,6 +71,14 @@ const StageSubmissionSchema = new Schema<StageSubmission>(
     submittedAt: { type: Date, required: true },
     responses: { type: Schema.Types.Mixed, default: {} },
     scores: { type: Map, of: Number },
+    panelistScores: [
+      {
+        interviewerEmail: { type: String, required: true },
+        scores: { type: Map, of: Number },
+        note: { type: String },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
     adminNote: { type: String },
     reviewedBy: { type: String },
     reviewedAt: { type: Date },
