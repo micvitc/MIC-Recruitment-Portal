@@ -6,6 +6,8 @@ export interface IRecruitmentCycle extends Document {
   openedAt: Date;
   closedAt?: Date;
   label: string;
+  startAt?: Date;
+  endAt?: Date;
 }
 
 const RecruitmentCycleSchema = new Schema<IRecruitmentCycle>(
@@ -15,6 +17,8 @@ const RecruitmentCycleSchema = new Schema<IRecruitmentCycle>(
     openedAt: { type: Date, default: Date.now },
     closedAt: { type: Date },
     label: { type: String, default: "MIC Recruitment 2026–27" },
+    startAt: { type: Date },
+    endAt: { type: Date },
   },
   { timestamps: true }
 );

@@ -20,6 +20,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog } from "@/components/ui/dialog";
 
+interface PanelistScore {
+  interviewerEmail: string;
+  scores: Record<string, number>;
+  note?: string;
+  createdAt: string;
+}
+
 interface StageSubmission {
   stage: number;
   submittedAt: string;
@@ -29,6 +36,7 @@ interface StageSubmission {
   reviewedAt?: string;
   responses: Record<string, unknown>;
   scores?: Record<string, number>;
+  panelistScores?: PanelistScore[];
 }
 
 interface PrefProgress {
@@ -40,6 +48,7 @@ interface PrefProgress {
 interface Application {
   _id: string;
   userEmail: string;
+  userName?: string;
   firstPreference: string;
   secondPreference: string;
   firstPrefType: string;
@@ -86,6 +95,19 @@ function ResponseViewer({ responses }: { responses: Record<string, unknown> }) {
   );
 }
 
+const DEPT_RUBRICS: Record<string, string[]> = {
+  development: ["Coding", "System Design", "Communication", "Problem Solving"],
+  "competitive-coding": ["Speed", "Accuracy", "Logic"],
+  "ui-ux": ["Visual Aesthetics", "Wireframing", "Figma Skills", "Research"],
+  "ai-ml": ["Math & Stats", "Python Libraries", "ML Concepts"],
+  "cyber-security": ["Hacking Skills", "Networking", "Linux", "Logic"],
+  design: ["Creativity", "Visual Aesthetics", "Tools", "Portfolio"],
+  management: ["Leadership", "Event Planning", "Teamwork", "Case Study"],
+  entrepreneurship: ["Business Acumen", "Pitching", "Idea Validation"],
+  "content-media": ["Writing", "Video Editing", "Camera Work", "Communication"],
+};
+const DEFAULT_RUBRIC = ["Technical", "Communication", "Creativity"];
+
 function PrefPanel({
   progress,
   deptSlug,
@@ -97,14 +119,24 @@ function PrefPanel({
   progress: PrefProgress;
   deptSlug: string;
   label: string;
-  onActionTrigger: (preference: "first" | "second", action: "advance" | "reject", note: string, scores?: Record<string, number>) => void;
+  onActionTrigger: (preference: "first" | "second", action: "advance" | "reject" | "score", note: string, scores?: Record<string, number>) => void;
   acting: boolean;
   totalStages: number;
 }) {
   const prefKey = label === "1st Preference" ? "first" : "second";
   const [note, setNote] = useState("");
-  const [scores, setScores] = useState<Record<string, number>>({ technical: 0, communication: 0, creativity: 0 });
+  
+  const rubricList = DEPT_RUBRICS[deptSlug] || DEFAULT_RUBRIC;
+  const [scores, setScores] = useState<Record<string, number>>({});
   const [expandedStage, setExpandedStage] = useState<number | null>(null);
+
+  useEffect(() => {
+    const initialScores: Record<string, number> = {};
+    rubricList.forEach((metric) => {
+      initialScores[metric.toLowerCase()] = 0;
+    });
+    setScores(initialScores);
+  }, [deptSlug]);
 
   const currentStageSubmission = progress.stages.find(
     (s) => s.stage === progress.currentStage
@@ -268,15 +300,63 @@ function PrefPanel({
                     <ResponseViewer responses={step.submission.responses} />
 
                     {step.submission.scores && Object.keys(step.submission.scores).length > 0 && (
-                      <div className="p-3 rounded-xl bg-teal-500/5 border border-teal-500/10 flex items-center gap-4 flex-wrap">
-                        <Award className="h-4 w-4 text-teal-400 shrink-0" />
-                        <div className="flex gap-4 flex-wrap">
+                      <div className="p-3.5 rounded-xl bg-teal-500/5 border border-teal-500/10 flex flex-col gap-2">
+                        <div className="flex items-center gap-2">
+                          <Award className="h-4 w-4 text-teal-400 shrink-0" />
+                          <span className="text-[10px] text-teal-450 uppercase font-extrabold tracking-wider">Scorecard Results</span>
+                        </div>
+                        <div className="flex gap-4 flex-wrap pt-1 border-b border-zinc-900 pb-2">
                           {Object.entries(step.submission.scores).map(([metric, score]) => (
                             <div key={metric} className="text-xs font-bold text-white">
                               <span className="text-zinc-500 capitalize">{metric}:</span> {score}/5
                             </div>
                           ))}
                         </div>
+                        {(() => {
+                          const entries = Object.values(step.submission.scores);
+                          const total = entries.reduce((acc, curr) => acc + Number(curr), 0);
+                          const maxPossible = entries.length * 5;
+                          const pct = maxPossible > 0 ? Math.round((total / maxPossible) * 100) : 0;
+                          
+                          let grade = "Weak";
+                          let color = "text-rose-455 font-bold";
+                          if (pct >= 85) { grade = "Excellent"; color = "text-teal-400 font-extrabold"; }
+                          else if (pct >= 70) { grade = "Strong"; color = "text-emerald-400 font-bold"; }
+                          else if (pct >= 50) { grade = "Average"; color = "text-amber-400 font-bold"; }
+
+                          return (
+                            <div className="flex justify-between items-center text-xs font-bold text-zinc-450 pt-1">
+                              <span>Total Score: <span className="text-white">{total}/{maxPossible} ({pct}%)</span></span>
+                              <span>Evaluation: <span className={color}>{grade}</span></span>
+                            </div>
+                          );
+                        })()}
+                        {/* Panelist Breakdown */}
+                        {step.submission.panelistScores && step.submission.panelistScores.length > 0 && (
+                          <div className="space-y-2 mt-2 pt-2 border-t border-zinc-900/60">
+                            <p className="text-[10px] text-zinc-550 font-extrabold uppercase tracking-wider">Panelist Breakdown</p>
+                            <div className="space-y-2 font-mono">
+                              {step.submission.panelistScores.map((ps: any, pIdx: number) => (
+                                <div key={pIdx} className="bg-zinc-950/60 p-2.5 border border-zinc-900 rounded-xl flex flex-col gap-1.5 text-[11px] text-zinc-350">
+                                  <div className="flex justify-between items-center text-[10px]">
+                                    <span className="text-teal-400 font-bold">{ps.interviewerEmail}</span>
+                                    <span className="text-zinc-650">{new Date(ps.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}</span>
+                                  </div>
+                                  <div className="flex gap-3 flex-wrap">
+                                    {Object.entries(ps.scores || {}).map(([metric, score]) => (
+                                      <div key={metric}>
+                                        <span className="text-zinc-500 capitalize">{metric}:</span> <strong className="text-white">{score as number}/5</strong>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  {ps.note && (
+                                    <p className="text-[10px] text-zinc-500 font-sans italic">“{ps.note}”</p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -322,7 +402,7 @@ function PrefPanel({
               <p className="text-[10px] font-extrabold text-zinc-400 uppercase tracking-wider">
                 Grading Rubric (Required to Advance)
               </p>
-              {["Technical", "Communication", "Creativity"].map((metric) => {
+              {rubricList.map((metric) => {
                 const key = metric.toLowerCase();
                 return (
                   <div key={metric} className="flex items-center justify-between flex-wrap gap-2">
@@ -336,7 +416,7 @@ function PrefPanel({
                           className={`h-8 w-8 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
                             scores[key] === val
                               ? "bg-teal-500 text-slate-950 shadow-[0_0_10px_rgba(20,184,166,0.3)]"
-                              : "bg-zinc-900 border border-zinc-800 text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                              : "bg-zinc-900 border border-zinc-800 text-zinc-400 hover:bg-zinc-900 hover:text-white"
                           }`}
                         >
                           {val}
@@ -348,15 +428,32 @@ function PrefPanel({
               })}
             </div>
 
-            <div className="flex gap-3 pt-2">
+            <div className="flex gap-3 pt-2 flex-wrap sm:flex-nowrap">
               <Button
                 variant="destructive"
                 onClick={() => onActionTrigger(prefKey, "reject", note)}
                 disabled={acting}
-                className="flex-1 font-bold h-11"
+                className="flex-1 font-bold h-11 cursor-pointer"
               >
                 Reject Candidate
               </Button>
+              
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  if (Object.values(scores).some((s) => s === 0)) {
+                    alert("Please grade all Rubric criteria (1-5) to save scores.");
+                    return;
+                  }
+                  onActionTrigger(prefKey, "score", note, scores);
+                }}
+                disabled={acting}
+                className="flex-1 font-bold h-11 text-teal-400 border-teal-500/30 hover:bg-teal-500/10 cursor-pointer"
+              >
+                Save Scores Only
+              </Button>
+
               <Button
                 variant="emerald"
                 onClick={() => {
@@ -367,7 +464,7 @@ function PrefPanel({
                   onActionTrigger(prefKey, "advance", note, scores);
                 }}
                 disabled={acting}
-                className="flex-1 font-bold h-11"
+                className="flex-1 font-bold h-11 cursor-pointer"
               >
                 Advance Stage
               </Button>
@@ -397,7 +494,7 @@ export default function ApplicantDetailPage({
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     preference: "first" | "second";
-    action: "advance" | "reject";
+    action: "advance" | "reject" | "score";
     note: string;
     scores?: Record<string, number>;
   } | null>(null);
@@ -431,16 +528,36 @@ export default function ApplicantDetailPage({
     };
   }, [id]);
 
-  const handleActionConfirmTrigger = (
+  const handleActionConfirmTrigger = async (
     preference: "first" | "second",
-    action: "advance" | "reject",
+    action: "advance" | "reject" | "score",
     note: string,
     scores?: Record<string, number>
   ) => {
+    if (action === "score") {
+      setActing(true);
+      setMessage("");
+      try {
+        const res = await fetch(`/api/admin/applications/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action, preference, note, scores }),
+        });
+        const data = await res.json();
+        setMessage(data.success ? data.message : data.error ?? "Action failed.");
+        if (data.success) await load();
+      } catch {
+        setMessage("Network communication failure.");
+      } finally {
+        setActing(false);
+      }
+      return;
+    }
+
     setConfirmDialog({
       isOpen: true,
       preference,
-      action,
+      action: action as "advance" | "reject",
       note,
       scores,
     });
@@ -508,12 +625,14 @@ export default function ApplicantDetailPage({
         {/* Header */}
         <div className="flex items-center gap-4 flex-wrap">
           <div className="h-12 w-12 rounded-full bg-zinc-950 border border-zinc-900 flex items-center justify-center text-lg font-bold text-teal-400">
-            {application.userEmail.charAt(0).toUpperCase()}
+            {(application.userName || application.userEmail).charAt(0).toUpperCase()}
           </div>
           <div>
-            <h1 className="text-2xl font-extrabold text-white tracking-tight">{application.userEmail}</h1>
+            <h1 className="text-2xl font-extrabold text-white tracking-tight">
+              {application.userName || application.userEmail}
+            </h1>
             <p className="text-xs text-zinc-500 mt-1">
-              Registered on{" "}
+              {application.userName ? `${application.userEmail} · ` : ""}Registered on{" "}
               {new Date(application.createdAt).toLocaleDateString("en-IN", {
                 day: "2-digit",
                 month: "long",

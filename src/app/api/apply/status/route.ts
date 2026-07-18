@@ -14,7 +14,8 @@ export async function GET() {
   await dbConnect();
   
   const cycle = await RecruitmentCycle.findOne({ cycleId: CYCLE_ID }).lean();
-  const cycleOpen = cycle?.isOpen ?? false;
+  const { isCycleOpen } = await import("@/lib/cycle");
+  const cycleOpen = isCycleOpen(cycle);
 
   if (!session?.user?.id) {
     return NextResponse.json({

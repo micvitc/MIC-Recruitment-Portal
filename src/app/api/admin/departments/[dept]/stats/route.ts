@@ -33,7 +33,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       firstPrefCount,
       secondPrefCount,
       acceptedCount,
-      scoreAgg,
+      scoreApps,
       stageAgg,
       yearAgg,
     ] = await Promise.all([
@@ -47,38 +47,13 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
           { secondPreference: dept, activePreference: "second" },
         ],
       }),
-      Application.aggregate([
-        {
-          $match: {
-            cycleId: "2026-27",
-            $or: [
-              { firstPreference: dept, activePreference: "first" },
-              { secondPreference: dept, activePreference: "second" },
-            ],
-          },
-        },
-        {
-          $project: {
-            stages: {
-              $cond: {
-                if: { $eq: ["$activePreference", "first"] },
-                then: "$firstPrefProgress.stages",
-                else: "$secondPrefProgress.stages",
-              },
-            },
-          },
-        },
-        { $unwind: "$stages" },
-        { $match: { "stages.scores": { $exists: true } } },
-        {
-          $group: {
-            _id: null,
-            avgTechnical: { $avg: "$stages.scores.technical" },
-            avgCommunication: { $avg: "$stages.scores.communication" },
-            avgCreativity: { $avg: "$stages.scores.creativity" },
-          },
-        },
-      ]),
+      Application.find({
+        cycleId: "2026-27",
+        $or: [
+          { firstPreference: dept, activePreference: "first" },
+          { secondPreference: dept, activePreference: "second" },
+        ],
+      }).lean(),
       Application.aggregate([
         {
           $match: {
@@ -144,11 +119,32 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
       ]),
     ]);
 
-    const avgScores = scoreAgg[0] || {
-      avgTechnical: 0,
-      avgCommunication: 0,
-      avgCreativity: 0,
-    };
+    const sumMap: Record<string, number> = {};
+    const countMap: Record<string, number> = {};
+
+    scoreApps.forEach((app: any) => {
+      const progress = app.activePreference === "first" ? app.firstPrefProgress : app.secondPrefProgress;
+      progress?.stages?.forEach((stage: any) => {
+        if (stage.scores) {
+          const entries = (stage.scores instanceof Map 
+            ? Array.from(stage.scores.entries())
+            : Object.entries(stage.scores)) as [string, any][];
+
+          entries.forEach(([key, val]) => {
+            const scoreVal = Number(val);
+            if (!isNaN(scoreVal) && scoreVal > 0) {
+              sumMap[key] = (sumMap[key] || 0) + scoreVal;
+              countMap[key] = (countMap[key] || 0) + 1;
+            }
+          });
+        }
+      });
+    });
+
+    const avgScores: Record<string, number> = {};
+    Object.keys(sumMap).forEach((key) => {
+      avgScores[key] = Number((sumMap[key] / countMap[key]).toFixed(1));
+    });
 
     return NextResponse.json({
       success: true,
@@ -160,11 +156,7 @@ export async function GET(req: NextRequest, { params }: RouteParams) {
         firstPrefCount,
         secondPrefCount,
         acceptedCount,
-        avgScores: {
-          technical: avgScores.avgTechnical ? Number(avgScores.avgTechnical.toFixed(1)) : 0,
-          communication: avgScores.avgCommunication ? Number(avgScores.avgCommunication.toFixed(1)) : 0,
-          creativity: avgScores.avgCreativity ? Number(avgScores.avgCreativity.toFixed(1)) : 0,
-        },
+        avgScores,
         stagesFunnel: stageAgg.map((s) => ({ stageNum: s._id - 1, count: s.count })),
         yearDistribution: yearAgg.map((y) => ({ year: String(y._id || "Other"), count: y.count })),
       },

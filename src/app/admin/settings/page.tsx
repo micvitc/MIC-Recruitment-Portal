@@ -37,16 +37,31 @@ interface DeptConfig {
 
 export default function AdminSettingsPage() {
   const router = useRouter();
-  const [cycle, setCycle] = useState<{ isOpen: boolean; label: string } | null>(null);
+  const [cycle, setCycle] = useState<{ isOpen: boolean; label: string; startAt?: string; endAt?: string } | null>(null);
   const [deptConfigs, setDeptConfigs] = useState<Record<string, DeptConfig>>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<Record<string, boolean>>({});
   const [saved, setSaved] = useState<Record<string, boolean>>({});
   const [toggling, setToggling] = useState(false);
   const [expanded, setExpanded] = useState<string>("");
+
+  // Schedule Dates
+  const [startAt, setStartAt] = useState("");
+  const [endAt, setEndAt] = useState("");
+  const [savingSchedule, setSavingSchedule] = useState(false);
+  const [savedSchedule, setSavedSchedule] = useState(false);
   
   // AlertDialog state
   const [showCycleConfirm, setShowCycleConfirm] = useState(false);
+
+  const formatToDatetimeLocal = (dateStr?: string | Date) => {
+    if (!dateStr) return "";
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return "";
+    const offset = d.getTimezoneOffset();
+    const adjusted = new Date(d.getTime() - offset * 60 * 1000);
+    return adjusted.toISOString().slice(0, 16);
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -56,7 +71,11 @@ export default function AdminSettingsPage() {
           ...DEPTS.map((d) => fetch(`/api/admin/departments/${d.slug}`)),
         ]);
         const cycleData = await cycleRes.json();
-        if (cycleData.success) setCycle(cycleData.cycle);
+        if (cycleData.success && cycleData.cycle) {
+          setCycle(cycleData.cycle);
+          setStartAt(formatToDatetimeLocal(cycleData.cycle.startAt));
+          setEndAt(formatToDatetimeLocal(cycleData.cycle.endAt));
+        }
 
         const configs: Record<string, DeptConfig> = {};
         for (let i = 0; i < deptRes.length; i++) {
@@ -97,6 +116,34 @@ export default function AdminSettingsPage() {
       // ignore
     } finally {
       setToggling(false);
+    }
+  };
+
+  const handleSaveSchedule = async () => {
+    if (!cycle) return;
+    setSavingSchedule(true);
+    try {
+      const res = await fetch("/api/admin/cycle", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          isOpen: cycle.isOpen,
+          startAt: startAt || null,
+          endAt: endAt || null,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.cycle) {
+        setCycle(data.cycle);
+        setStartAt(formatToDatetimeLocal(data.cycle.startAt));
+        setEndAt(formatToDatetimeLocal(data.cycle.endAt));
+        setSavedSchedule(true);
+        setTimeout(() => setSavedSchedule(false), 2500);
+      }
+    } catch {
+      alert("Failed to save schedule settings.");
+    } finally {
+      setSavingSchedule(false);
     }
   };
 
@@ -149,24 +196,70 @@ export default function AdminSettingsPage() {
             <CardTitle className="text-base font-bold">Recruitment Forms Status</CardTitle>
             <CardDescription>Open or close applications for the recruitment cycle</CardDescription>
           </CardHeader>
-          <CardContent className="flex items-center justify-between flex-wrap gap-6 pt-0">
-            <div>
-              <p className="text-sm font-bold text-zinc-200">{cycle?.label ?? "MIC Recruitment 2026–27"}</p>
-              <p className="text-xs text-zinc-500 mt-1">
-                {cycle?.isOpen
-                  ? "Students can currently access the portal to apply and modify responses."
-                  : "All application forms and candidate edit controls are currently locked."}
-              </p>
+          <CardContent className="space-y-6 pt-0">
+            <div className="flex items-center justify-between flex-wrap gap-6 border-b border-zinc-900 pb-4">
+              <div>
+                <p className="text-sm font-bold text-zinc-200">{cycle?.label ?? "MIC Recruitment 2026–27"}</p>
+                <p className="text-xs text-zinc-500 mt-1">
+                  {cycle?.isOpen
+                    ? "Students can currently access the portal to apply and modify responses."
+                    : "All application forms and candidate edit controls are currently locked."}
+                </p>
+              </div>
+              <Button
+                variant={cycle?.isOpen ? "default" : "destructive"}
+                onClick={() => setShowCycleConfirm(true)}
+                disabled={toggling}
+                className="px-6 font-bold h-11 cursor-pointer"
+              >
+                {toggling && <Loader2 className="h-4 w-4 animate-spin" />}
+                {cycle?.isOpen ? "OPEN — Click to Close" : "CLOSED — Click to Open"}
+              </Button>
             </div>
-            <Button
-              variant={cycle?.isOpen ? "default" : "destructive"}
-              onClick={() => setShowCycleConfirm(true)}
-              disabled={toggling}
-              className="px-6 font-bold h-11"
-            >
-              {toggling && <Loader2 className="h-4 w-4 animate-spin" />}
-              {cycle?.isOpen ? "OPEN — Click to Close" : "CLOSED — Click to Open"}
-            </Button>
+
+            {/* Scheduled Window Form */}
+            <div className="space-y-4 pt-2">
+              <p className="text-[10px] font-extrabold uppercase tracking-widest text-zinc-500">
+                Scheduled Timer Configuration
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] text-zinc-550 uppercase tracking-widest font-extrabold">Auto-Open Schedule Time</label>
+                  <Input
+                    type="datetime-local"
+                    value={startAt}
+                    onChange={(e) => setStartAt(e.target.value)}
+                    className="font-mono text-xs"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] text-zinc-550 uppercase tracking-widest font-extrabold">Auto-Close Schedule Time</label>
+                  <Input
+                    type="datetime-local"
+                    value={endAt}
+                    onChange={(e) => setEndAt(e.target.value)}
+                    className="font-mono text-xs"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  onClick={handleSaveSchedule}
+                  disabled={savingSchedule}
+                  variant="emerald"
+                  className="font-bold text-sm h-10 min-w-36 gap-2 cursor-pointer"
+                >
+                  {savingSchedule ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : savedSchedule ? (
+                    <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                  ) : (
+                    <Save className="h-4 w-4" />
+                  )}
+                  {savedSchedule ? "Schedule Saved!" : "Save Schedule"}
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
 

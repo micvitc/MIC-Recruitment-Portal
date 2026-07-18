@@ -34,7 +34,7 @@ export async function PUT(req: NextRequest) {
 
   await dbConnect();
   const body = await req.json();
-  const { isOpen } = body;
+  const { isOpen, startAt, endAt } = body;
 
   if (typeof isOpen !== "boolean") {
     return NextResponse.json(
@@ -43,13 +43,20 @@ export async function PUT(req: NextRequest) {
     );
   }
 
+  const updateFields: any = { isOpen };
+  if (startAt !== undefined) updateFields.startAt = startAt ? new Date(startAt) : null;
+  if (endAt !== undefined) updateFields.endAt = endAt ? new Date(endAt) : null;
+
+  if (isOpen) {
+    updateFields.openedAt = new Date();
+  } else {
+    updateFields.closedAt = new Date();
+  }
+
   const cycle = await RecruitmentCycle.findOneAndUpdate(
     { cycleId: "2026-27" },
     {
-      $set: {
-        isOpen,
-        ...(isOpen ? { openedAt: new Date() } : { closedAt: new Date() }),
-      },
+      $set: updateFields,
     },
     { new: true, upsert: true }
   );

@@ -20,7 +20,72 @@ interface PageConfig {
   cycleOpen: boolean;
   footerBlinkText: string;
   marqueeText: string;
+  cycle?: {
+    isOpen: boolean;
+    startAt?: string;
+    endAt?: string;
+  };
 }
+
+interface CountdownProps {
+  targetDate: string;
+  onExpiry?: () => void;
+}
+
+const CountdownTimer: React.FC<CountdownProps> = ({ targetDate, onExpiry }) => {
+  const [timeLeft, setTimeLeft] = useState<{
+    days: number;
+    hours: number;
+    minutes: number;
+    seconds: number;
+  } | null>(null);
+
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const difference = new Date(targetDate).getTime() - new Date().getTime();
+      if (difference <= 0) {
+        setTimeLeft(null);
+        if (onExpiry) onExpiry();
+        return;
+      }
+      setTimeLeft({
+        days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
+        minutes: Math.floor((difference / 1000 / 60) % 60),
+        seconds: Math.floor((difference / 1000) % 60),
+      });
+    };
+
+    calculateTimeLeft();
+    const interval = setInterval(calculateTimeLeft, 1000);
+    return () => clearInterval(interval);
+  }, [targetDate, onExpiry]);
+
+  if (!timeLeft) return null;
+
+  return (
+    <div className="bg-[#FFE4D6]/90 border-4 border-black rounded-[6px] p-4 text-center space-y-2 font-bold w-full max-w-sm mx-auto shadow-[4px_4px_0px_0px_rgba(0,0,0,0.15)] animate-pulse">
+      <p className="text-[10px] text-[#A93710] uppercase tracking-widest font-extrabold">Recruitment Opens In</p>
+      <div className="flex gap-2 justify-center text-[13px] text-black">
+        <span className="bg-[#C85A28]/10 px-2 py-1 border-2 border-black rounded-[4px] font-extrabold">
+          {String(timeLeft.days).padStart(2, "0")}D
+        </span>
+        <span className="self-center font-extrabold">:</span>
+        <span className="bg-[#C85A28]/10 px-2 py-1 border-2 border-black rounded-[4px] font-extrabold">
+          {String(timeLeft.hours).padStart(2, "0")}H
+        </span>
+        <span className="self-center font-extrabold">:</span>
+        <span className="bg-[#C85A28]/10 px-2 py-1 border-2 border-black rounded-[4px] font-extrabold">
+          {String(timeLeft.minutes).padStart(2, "0")}M
+        </span>
+        <span className="self-center font-extrabold">:</span>
+        <span className="bg-[#C85A28]/10 px-2 py-1 border-2 border-black rounded-[4px] font-extrabold">
+          {String(timeLeft.seconds).padStart(2, "0")}S
+        </span>
+      </div>
+    </div>
+  );
+};
 
 function RetroPipe({ height, top, left, isTop }: { height: number; top: string; left: string; isTop: boolean }) {
   return (
@@ -203,6 +268,16 @@ export default function Homepage() {
                       ))}
                     </div>
                   </div>
+
+                  {/* Countdown Timer */}
+                  {!cycleOpen && pageConfig?.cycle?.startAt && new Date(pageConfig.cycle.startAt) > new Date() && (
+                    <div className="w-full mt-2">
+                      <CountdownTimer 
+                        targetDate={pageConfig.cycle.startAt} 
+                        onExpiry={() => setCycleOpen(true)}
+                      />
+                    </div>
+                  )}
 
                   {/* Buttons */}
                   <div className="flex w-full gap-8 mt-6">

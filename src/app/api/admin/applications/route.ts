@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { dbConnect } from "@/lib/mongodb";
 import Application from "@/models/Application";
+import mongoose from "mongoose";
 
 // Whitelist of sortable fields to prevent unintended field exposure
 const ALLOWED_SORTS = new Set([
@@ -62,8 +63,17 @@ export async function GET(req: NextRequest) {
   if (search) {
     // Escape user input before using it in a MongoDB $regex to prevent ReDoS
     const safeSearch = escapeRegex(search);
+    
+    // Search users by name first to get their emails
+    const db = mongoose.connection.db;
+    const matchingUsers = db
+      ? await db.collection("users").find({ name: { $regex: safeSearch, $options: "i" } }, { projection: { email: 1 } }).toArray()
+      : [];
+    const matchingEmails = matchingUsers.map(u => u.email).filter(Boolean);
+
     filter.$or = [
       { userEmail: { $regex: safeSearch, $options: "i" } },
+      { userEmail: { $in: matchingEmails } }
     ];
   }
 
@@ -76,9 +86,20 @@ export async function GET(req: NextRequest) {
     Application.countDocuments(filter),
   ]);
 
+  // Enrich with user name from users collection
+  const emails = applications.map((app) => app.userEmail);
+  const db = mongoose.connection.db;
+  const users = db ? await db.collection("users").find({ email: { $in: emails } }).toArray() : [];
+  const userMap = new Map(users.map((u) => [u.email?.toLowerCase(), u.name]));
+
+  const enrichedApplications = applications.map((app) => ({
+    ...app,
+    userName: userMap.get(app.userEmail.toLowerCase()) || "",
+  }));
+
   return NextResponse.json({
     success: true,
-    applications,
+    applications: enrichedApplications,
     pagination: { page, limit, total, pages: Math.ceil(total / limit) },
   });
 }

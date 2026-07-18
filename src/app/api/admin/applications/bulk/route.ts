@@ -113,8 +113,10 @@ export async function POST(req: NextRequest) {
       await app.save();
       processedEmails.push(app.userEmail);
 
-      // Email update (non-blocking background task)
-      sendStageUpdate(app.userEmail, action === "advance" ? "passed" : "rejected", note).catch(console.error);
+      // Email update (non-blocking background task) only on advance
+      if (action === "advance") {
+        sendStageUpdate(app.userEmail, "passed", note).catch(console.error);
+      }
     }
 
     // Log the bulk admin action
