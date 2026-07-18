@@ -155,7 +155,7 @@ interface ApplicationStatus {
   };
 }
 
-function playRetroSound(type: "select" | "jump" | "open" | "close" | "die") {
+function playRetroSound(type: "select" | "jump" | "open" | "close" | "die" | "point") {
   if (typeof window === "undefined") return;
   try {
     const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
@@ -206,12 +206,43 @@ function playRetroSound(type: "select" | "jump" | "open" | "close" | "die") {
       gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.4);
       osc.start();
       osc.stop(ctx.currentTime + 0.4);
+    } else if (type === "point") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, ctx.currentTime); // High A note
+      osc.frequency.setValueAtTime(1046.5, ctx.currentTime + 0.08); // High C note
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.2);
     }
   } catch (e) {
     console.warn("Audio Context failed", e);
   }
 }
 
+
+interface PipeData {
+  left: number;
+  top: number;
+  height: number;
+  isTop: boolean;
+}
+
+const STATIC_PIPES: PipeData[] = [
+  // Top pipes
+  { left: 169, top: -4, height: 391, isTop: true },
+  { left: 746, top: -5, height: 468, isTop: true },
+  { left: 1234, top: -5, height: 443, isTop: true },
+  { left: 1723, top: 0, height: 391, isTop: true },
+  { left: 2214, top: -1, height: 461, isTop: true },
+  { left: 2705, top: -45, height: 461, isTop: true },
+  // Bottom pipes
+  { left: 196, top: 607, height: 301, isTop: false },
+  { left: 909, top: 602, height: 301, isTop: false },
+  { left: 1396, top: 545, height: 358, isTop: false },
+  { left: 1885, top: 570, height: 333, isTop: false },
+  { left: 2375, top: 602, height: 301, isTop: false },
+];
 
 export default function RecruitmentsPage() {
   const router = useRouter();
@@ -229,6 +260,83 @@ export default function RecruitmentsPage() {
   const latestScaleRef = useRef(1);
   const [scrollX, setScrollX] = useState(0);
   const [isScrollingLeft, setIsScrollingLeft] = useState(false);
+
+  // Flappy Bird Game State
+  const [gameStatus, setGameStatus] = useState<"idle" | "playing" | "dead">("idle");
+  const gameStatusRef = useRef<"idle" | "playing" | "dead">("idle");
+  const passedPipes = useRef<Set<number>>(new Set([169, 196])); // Ignore initial pipes passed at start
+  const [dynamicPipes, setDynamicPipes] = useState<PipeData[]>(STATIC_PIPES);
+  const currentPipesRef = useRef<PipeData[]>(STATIC_PIPES);
+  const [canvasWidth, setCanvasWidth] = useState(2865);
+  const canvasWidthRef = useRef(2865);
+  const targetScrollXRef = useRef(0);
+  const isKeyScrollingRef = useRef(false);
+
+  const updateGameStatus = (status: "idle" | "playing" | "dead") => {
+    setGameStatus(status);
+    gameStatusRef.current = status;
+  };
+
+  const resetGame = (startPlaying = false) => {
+    const p = birdPhysicsRef.current;
+    p.currentX = 0;
+    p.currentY = 0;
+    p.velocityY = 0;
+    p.isDead = false;
+    p.rotation = 0;
+    p.time = 0;
+    
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollLeft = 0;
+    }
+    latestScrollXRef.current = 0;
+    targetScrollXRef.current = 0;
+    isKeyScrollingRef.current = false;
+    
+    passedPipes.current = new Set([169, 196]); // Ignore initial pipes passed at start
+    setBirdScore(0);
+    setIsDead(false);
+    setDynamicPipes(STATIC_PIPES);
+    currentPipesRef.current = STATIC_PIPES;
+    canvasWidthRef.current = 2865;
+    setCanvasWidth(2865);
+    
+    if (startPlaying === true) {
+      updateGameStatus("playing");
+      p.velocityY = -15; // Smooth instant upward jump arc in GPU physics loop
+      playRetroSound("jump");
+    } else {
+      updateGameStatus("idle");
+    }
+  };
+
+  const flapBird = () => {
+    const p = birdPhysicsRef.current;
+    if (p.isDead) return;
+    
+    if (gameStatusRef.current === "idle") {
+      // If we are scrolled to the right (browsing cards), reset to start and play immediately
+      if (latestScrollXRef.current > 10) {
+        resetGame(true);
+        return;
+      }
+      updateGameStatus("playing");
+    }
+    
+    playRetroSound("jump");
+    p.velocityY = -15; // Smooth instant upward jump arc in GPU physics loop
+  };
+
+  const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (gameStatusRef.current === "dead") return;
+    
+    const target = e.target as HTMLElement;
+    if (target.closest("button") || target.closest(".group") || target.closest("[role='dialog']") || selectedDepartment !== null) {
+      return;
+    }
+    
+    flapBird();
+  };
 
   // Application State
   const [appStatus, setAppStatus] = useState<ApplicationStatus | null>(null);
@@ -257,6 +365,14 @@ export default function RecruitmentsPage() {
     const currentScrollX = e.currentTarget.scrollLeft;
     latestScrollXRef.current = currentScrollX;
     setScrollX(currentScrollX);
+
+    if (!isKeyScrollingRef.current) {
+      targetScrollXRef.current = currentScrollX;
+    } else {
+      if (Math.abs(targetScrollXRef.current - currentScrollX) < 1) {
+        isKeyScrollingRef.current = false;
+      }
+    }
 
     if (currentScrollX < lastScrollXRef.current - 1) {
       setIsScrollingLeft(true);
@@ -339,50 +455,151 @@ export default function RecruitmentsPage() {
         const p = birdPhysicsRef.current;
         p.time += 0.045;
 
-        // 1. Smooth Camera-Follow Glide along horizontal scroll (lerp)
+        // 1. Auto-scroll horizontal container if playing, or lerp scroll if key scrolling
+        if (gameStatusRef.current === "playing") {
+          if (scrollContainerRef.current) {
+            const currentScale = latestScaleRef.current || 1;
+            // Scroll at 2.5px per frame (scaled)
+            const newScrollLeft = scrollContainerRef.current.scrollLeft + 2.5 * currentScale;
+            scrollContainerRef.current.scrollLeft = newScrollLeft;
+            latestScrollXRef.current = newScrollLeft;
+            targetScrollXRef.current = newScrollLeft; // Keep synced
+          }
+        } else {
+          // Lerp for smooth arrow key horizontal scrolling
+          if (scrollContainerRef.current && isKeyScrollingRef.current) {
+            const currentScroll = scrollContainerRef.current.scrollLeft;
+            if (Math.abs(targetScrollXRef.current - currentScroll) > 0.5) {
+              const nextScroll = currentScroll + (targetScrollXRef.current - currentScroll) * 0.12;
+              scrollContainerRef.current.scrollLeft = nextScroll;
+              latestScrollXRef.current = nextScroll;
+            }
+          }
+        }
+
+        // 2. Smooth Camera-Follow Glide along horizontal scroll (lerp)
         const targetX = latestScrollXRef.current / (latestScaleRef.current || 1);
         p.currentX += (targetX - p.currentX) * 0.14; // Organic 14% damping per frame
 
-        // 2. Vertical Floating Breathing Bob & Flapping Jump Physics
-        const baseFloatY = Math.sin(p.time) * 11; // Smooth 11px sine wave hover
-        let totalY = baseFloatY + p.currentY;
+        // 3. Vertical Floating Breathing Bob & Flapping Jump Physics
+        let totalY = p.currentY;
+        if (gameStatusRef.current === "idle") {
+          // Smooth 11px sine wave hover during idle
+          totalY += Math.sin(p.time) * 11;
+        }
+
         const tiltAngle = Math.max(-25, Math.min(30, p.velocityY * 2));
 
         if (!p.isDead) {
-          if (p.velocityY !== 0 || Math.abs(p.currentY) > 0.05) {
+          if (gameStatusRef.current === "playing") {
             p.currentY += p.velocityY;
             p.velocityY += 1.15; // Smooth gravity pull
 
-            if (p.currentY >= 0 && p.velocityY > 0) {
-              p.currentY = 0;
+            const birdLeft = 240 + p.currentX;
+            const birdRight = birdLeft + 72;
+            const birdTop = 480 + totalY;
+            const birdBottom = birdTop + 72;
+
+            // Check hit top boundary
+            if (birdTop < 0) {
+              p.isDead = true;
+              p.velocityY = 0;
+              setIsDead(true);
+              updateGameStatus("dead");
+              playRetroSound("die");
+            }
+
+            // Check hit ground boundary
+            const groundLevel = 925;
+            if (birdBottom - 10 >= groundLevel) { // 10px bottom padding
+              p.isDead = true;
+              p.velocityY = 0;
+              setIsDead(true);
+              updateGameStatus("dead");
+              playRetroSound("die");
+            }
+
+            // Check pipe collisions (with forgiving 12px horizontal, 10px vertical padding)
+            const paddingX = 12;
+            const paddingY = 10;
+            const bLeft = birdLeft + paddingX;
+            const bRight = birdRight - paddingX;
+            const bTop = birdTop + paddingY;
+            const bBottom = birdBottom - paddingY;
+
+            for (const pipe of currentPipesRef.current) {
+              if (bRight > pipe.left && bLeft < (pipe.left + 52)) {
+                if (bBottom > pipe.top && bTop < (pipe.top + pipe.height)) {
+                  p.isDead = true;
+                  p.velocityY = 0; // stop upward/downward velocity
+                  setIsDead(true);
+                  updateGameStatus("dead");
+                  playRetroSound("die");
+                  break;
+                }
+              }
+            }
+
+            // Check passing pipes for score
+            currentPipesRef.current.forEach((pipe) => {
+              const gateX = pipe.left + 52;
+              if (birdLeft > gateX && !passedPipes.current.has(pipe.left)) {
+                passedPipes.current.add(pipe.left);
+                setBirdScore((prev) => {
+                  const newScore = prev + 1;
+                  playRetroSound("point");
+                  return newScore;
+                });
+              }
+            });
+
+            // Generatively spawn new pipes as the bird flies forward
+            const maxPipeLeft = Math.max(...currentPipesRef.current.map(pipe => pipe.left));
+            if (birdLeft + 1500 > maxPipeLeft) {
+              const nextLeft = maxPipeLeft + 450;
+              
+              // Generate a top and bottom pipe pair with a 200px gap
+              const gapHeight = 200;
+              const minTopHeight = 120;
+              const maxTopHeight = 500;
+              const topHeight = Math.floor(Math.random() * (maxTopHeight - minTopHeight + 1)) + minTopHeight;
+              const bottomTop = topHeight + gapHeight;
+              const bottomHeight = 925 - bottomTop;
+
+              const newPipes = [
+                { left: nextLeft, top: 0, height: topHeight, isTop: true },
+                { left: nextLeft, top: bottomTop, height: bottomHeight, isTop: false }
+              ];
+
+              currentPipesRef.current = [...currentPipesRef.current, ...newPipes];
+              setDynamicPipes(currentPipesRef.current);
+            }
+
+            // Extend canvas width in larger chunks to avoid React rendering lag
+            if (birdLeft + 1500 > canvasWidthRef.current) {
+              canvasWidthRef.current += 2000;
+              setCanvasWidth(canvasWidthRef.current);
+            }
+          } else {
+            // Idle state: keep velocity and displacement at 0
+            p.currentY = 0;
+            p.velocityY = 0;
+          }
+
+          p.rotation = tiltAngle;
+        } else {
+          // Dying animation: fall to ground
+          const groundY = 925 - 480 - 72; // 373px offset from 480px starting Y
+          if (p.currentY < groundY) {
+            p.currentY += p.velocityY;
+            p.velocityY += 1.5; // Fast gravity
+            p.rotation += 15; // Spin out of control
+            if (p.currentY > groundY) {
+              p.currentY = groundY;
               p.velocityY = 0;
             }
           }
-          p.rotation = tiltAngle;
-
-          // Check hit top boundary
-          if (p.currentY < -480) {
-            p.isDead = true;
-            p.velocityY = 0; // stop upward movement
-            setIsDead(true);
-            setBirdScore(0);
-            playRetroSound("die");
-          }
-        } else {
-          // Dying animation
-          p.currentY += p.velocityY;
-          p.velocityY += 1.5; // Fast gravity
-          p.rotation += 15; // Spin out of control
           totalY = p.currentY; // Ignore sine wave hover when dead
-
-          // Revive when off-screen bottom
-          if (p.currentY > 600) {
-            p.isDead = false;
-            p.currentY = 0;
-            p.velocityY = 0;
-            p.rotation = 0;
-            setIsDead(false);
-          }
         }
 
         // Apply direct GPU-accelerated transform without CSS layout thrashing or transition lag
@@ -397,21 +614,56 @@ export default function RecruitmentsPage() {
     return () => cancelAnimationFrame(animationFrameId);
   }, []);
 
-  // Keyboard navigation for horizontal scrolling
+  // Keyboard navigation and spacebar flapper
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't capture keys if typing in input/textarea
+      const activeEl = document.activeElement;
+      if (activeEl && (activeEl.tagName === "INPUT" || activeEl.tagName === "TEXTAREA")) {
+        return;
+      }
+      
+      // Don't capture keys if popup is open or error is displayed
+      if (selectedDepartment !== null || error !== null) {
+        return;
+      }
+
+      if (e.key === " ") {
+        e.preventDefault(); // Stop page scrolling down
+        if (gameStatusRef.current === "dead") {
+          return;
+        }
+        flapBird();
+        return;
+      }
+
       if (!scrollContainerRef.current) return;
+      // Disable arrow keys scrolling during playing to avoid weird camera jitter
+      if (gameStatusRef.current === "playing") {
+        if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+          e.preventDefault();
+          return;
+        }
+      }
+
       if (e.key === "ArrowRight") {
-        scrollContainerRef.current.scrollBy({ left: 180, behavior: "smooth" });
+        e.preventDefault();
+        const maxScroll = scrollContainerRef.current.scrollWidth - scrollContainerRef.current.clientWidth;
+        isKeyScrollingRef.current = true;
+        const scrollStep = e.repeat ? 20 : 220;
+        targetScrollXRef.current = Math.min(maxScroll, targetScrollXRef.current + scrollStep);
       } else if (e.key === "ArrowLeft") {
-        scrollContainerRef.current.scrollBy({ left: -180, behavior: "smooth" });
+        e.preventDefault();
+        isKeyScrollingRef.current = true;
+        const scrollStep = e.repeat ? 20 : 220;
+        targetScrollXRef.current = Math.max(0, targetScrollXRef.current - scrollStep);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [selectedDepartment, error]);
 
-  // Map vertical wheel scroll to horizontal scroll
+  // Map vertical wheel scroll to horizontal scroll (scaled down for smooth touchpad/wheel sliding)
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
@@ -420,7 +672,7 @@ export default function RecruitmentsPage() {
       // Only map if vertical scroll is dominant
       if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
         e.preventDefault();
-        container.scrollBy({ left: e.deltaY, behavior: "auto" });
+        container.scrollBy({ left: e.deltaY * 0.35, behavior: "auto" });
       }
     };
 
@@ -511,11 +763,9 @@ export default function RecruitmentsPage() {
     }
   };
 
-  const handleBirdClick = () => {
-    if (birdPhysicsRef.current.isDead) return;
-    playRetroSound("jump");
-    setBirdScore((prev) => prev + 1);
-    birdPhysicsRef.current.velocityY = -15; // Smooth instant upward jump arc in GPU physics loop
+  const handleBirdClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    flapBird();
   };
 
 
@@ -527,6 +777,7 @@ export default function RecruitmentsPage() {
       className={`${pressStart.variable} font-press-start w-full h-[100dvh] overflow-x-auto overflow-y-hidden retro-scrollbar select-none bg-[#DD9955] relative`}
       ref={scrollContainerRef}
       onScroll={handleScroll}
+      onClick={handleContainerClick}
     >
       {/* Floating Header Buttons (Fixed) */}
       <div className="fixed top-6 right-6 z-50 flex items-center gap-4">
@@ -619,16 +870,17 @@ export default function RecruitmentsPage() {
       {/* Sized container to calculate correct scroll boundaries post-scaling */}
       <div
         style={{
-          width: `${2865 * scale}px`,
+          width: `${(Math.max(2865, canvasWidth) + 1500) * scale}px`,
           height: `${1024 * scale}px`,
           position: "relative",
           overflow: "hidden",
         }}
       >
-        {/* Pixel-Perfect Figma Canvas Sized at 2865x1024 and scaled using CSS Transform */}
+        {/* Pixel-Perfect Figma Canvas Sized dynamically and scaled using CSS Transform */}
         <div
-          className="w-[2865px] h-[1024px] absolute top-0 left-0 bg-[linear-gradient(180deg,#1188EE_0%,#0E8AEA_25%,#1093EB_35%,#1197EC_46%,#16B6F4_52%,#10CBF1_56%,#0FC6F1_60%,#15DEF0_65%,#15DEF0_81%)] overflow-hidden origin-top-left"
+          className="h-[1024px] absolute top-0 left-0 bg-[linear-gradient(180deg,#1188EE_0%,#0E8AEA_25%,#1093EB_35%,#1197EC_46%,#16B6F4_52%,#10CBF1_56%,#0FC6F1_60%,#15DEF0_65%,#15DEF0_81%)] overflow-hidden origin-top-left"
           style={{
+            width: `${Math.max(2865, canvasWidth) + 1500}px`,
             transform: `scale(${scale})`,
           }}
         >
@@ -670,30 +922,54 @@ export default function RecruitmentsPage() {
             style={{ animationDelay: "0.2s" }}
           />
 
-          {/* Background Skyline Silhouettes (Figma Positions) */}
-          <img
-            src="/pixel_cloud_large.svg"
-            alt="Skyline Back Left"
-            className="absolute top-[566px] left-0 w-[1437px] h-[458px] object-cover opacity-100 pointer-events-none select-none pixelated"
-          />
-          <img
-            src="/pixel_cloud_large.svg"
-            alt="Skyline Back Right"
-            className="absolute top-[565px] left-[1389px] w-[1510px] h-[465px] object-cover opacity-100 pointer-events-none select-none pixelated"
-          />
+          {/* Generative Clouds for Infinite Scrolling */}
+          {canvasWidth > 2865 && Array.from({ length: Math.ceil((canvasWidth - 2865) / 800) }).map((_, idx) => {
+            const baseLeft = 2865 + idx * 800;
+            const top1 = 50 + (idx % 3) * 60;
+            const left1 = baseLeft + (idx % 2) * 200 + 100;
+            const top2 = 220 + (idx % 2) * 80;
+            const left2 = baseLeft + (idx % 3) * 150 + 450;
+            return (
+              <React.Fragment key={`gen-clouds-${idx}`}>
+                <img
+                  src="/pixel_cloud_small.svg"
+                  alt="Cloud"
+                  className="absolute w-[280px] opacity-85 animate-retro-float pixelated select-none pointer-events-none"
+                  style={{ top: `${top1}px`, left: `${left1}px`, animationDelay: `${(idx % 4) * 0.6}s` }}
+                />
+                <img
+                  src="/pixel_cloud_small.svg"
+                  alt="Cloud"
+                  className="absolute w-[320px] opacity-75 animate-retro-float pixelated select-none pointer-events-none"
+                  style={{ top: `${top2}px`, left: `${left2}px`, animationDelay: `${(idx % 3) * 0.8}s` }}
+                />
+              </React.Fragment>
+            );
+          })}
 
-          {/* Midground Skyline Blocks (Continuous without gaps across 2865px canvas) */}
-          {Array.from({ length: 12 }).map((_, idx) => (
+          {/* Background Skyline Silhouettes */}
+          {Array.from({ length: Math.ceil((canvasWidth + 1500) / 1440) }).map((_, idx) => (
             <img
-              key={idx}
+              key={`skyline-silhouette-${idx}`}
+              src="/pixel_cloud_large.svg"
+              alt={`Skyline Back ${idx}`}
+              className="absolute top-[565px] w-[1500px] h-[465px] object-cover opacity-100 pointer-events-none select-none pixelated"
+              style={{ left: `${idx * 1440}px` }}
+            />
+          ))}
+
+          {/* Midground Skyline Blocks */}
+          {Array.from({ length: Math.ceil((canvasWidth + 1500) / 245) }).map((_, idx) => (
+            <img
+              key={`skyline-${idx}`}
               src="/city_skyline.svg"
               alt="Skyline Block"
               className="absolute top-[631px] w-[246px] h-[249px] opacity-75 pointer-events-none select-none pixelated"
               style={{ left: `${idx * 245}px` }}
             />
           ))}
-          {/* Green Bushes Silhouettes (Continuous without gaps across 2865px canvas) */}
-          {Array.from({ length: 3 }).map((_, idx) => (
+          {/* Green Bushes Silhouettes */}
+          {Array.from({ length: Math.ceil((canvasWidth + 1500) / 1409) }).map((_, idx) => (
             <img
               key={`bush-${idx}`}
               src="/bushes_pixel.svg"
@@ -703,21 +979,16 @@ export default function RecruitmentsPage() {
             />
           ))}
 
-          {/* Green Mario Pipes (Exact Figma Positions & Heights) */}
-          {/* Top Pipes (pointing down) */}
-          <RetroPipe left="169px" top="-4px" height={391} isTop={true} />
-          <RetroPipe left="746px" top="-5px" height={468} isTop={true} />
-          <RetroPipe left="1234px" top="-5px" height={443} isTop={true} />
-          <RetroPipe left="1723px" top="0px" height={391} isTop={true} />
-          <RetroPipe left="2214px" top="-1px" height={461} isTop={true} />
-          <RetroPipe left="2705px" top="-45px" height={461} isTop={true} />
-
-          {/* Bottom Pipes (pointing up) */}
-          <RetroPipe left="196px" top="607px" height={301} isTop={false} />
-          <RetroPipe left="909px" top="602px" height={301} isTop={false} />
-          <RetroPipe left="1396px" top="545px" height={358} isTop={false} />
-          <RetroPipe left="1885px" top="570px" height={333} isTop={false} />
-          <RetroPipe left="2375px" top="602px" height={301} isTop={false} />
+          {/* Green Mario Pipes (Dynamic & Generative) */}
+          {dynamicPipes.map((pipe, idx) => (
+            <RetroPipe
+              key={`pipe-${idx}-${pipe.left}-${pipe.isTop}`}
+              left={`${pipe.left}px`}
+              top={`${pipe.top}px`}
+              height={pipe.height}
+              isTop={pipe.isTop}
+            />
+          ))}
 
 
 
@@ -726,13 +997,11 @@ export default function RecruitmentsPage() {
 
 
           {/* Score Counter (Flappy Bird Interaction) */}
-          {birdScore > 0 && (
+          {gameStatus !== "idle" && (
             <div className="absolute right-[160px] top-8 z-30 bg-black/80 border-4 border-black p-3 text-[11px] text-yellow-400 retro-shadow">
-              FLAPS: {birdScore}
+              SCORE: {birdScore}
             </div>
           )}
-
-
 
           {/* Interactive Flappy Bird Character (Ultra-Smooth 60/120fps GPU Physics Engine) */}
           <div 
@@ -748,9 +1017,9 @@ export default function RecruitmentsPage() {
                 className={`w-[72px] h-[72px] pixelated drop-shadow-[3px_3px_0px_rgba(0,0,0,0.3)] transition-[transform,filter] duration-150 select-none pointer-events-none ${isScrollingLeft ? "scale-x-[-1]" : "scale-x-[1]"} ${isDead ? "grayscale brightness-50" : "hover:scale-110 active:scale-95"}`}
               />
             </div>
-            {!isDead && (
+            {gameStatus === "idle" && (
               <div className="bg-black/80 text-[7px] text-white px-1.5 py-0.5 border border-black rounded-sm text-center -mt-2 animate-pulse whitespace-nowrap text-[8px] uppercase select-none pointer-events-none">
-                TAP BIRD!
+                PRESS SPACE OR TAP TO PLAY
               </div>
             )}
           </div>
@@ -965,6 +1234,40 @@ export default function RecruitmentsPage() {
           }}
           onApply={handleApplyFromPopup}
         />
+      )}
+
+      {/* ================= GAME OVER OVERLAY ================= */}
+      {gameStatus === "dead" && (
+        <div className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div 
+            className="bg-[#FFE4D6] border-4 border-black p-6 max-w-sm w-full relative flex flex-col items-center gap-4 text-center" 
+            style={{ boxShadow: "8px 8px 0px 0px rgba(0,0,0,0.5)" }}
+          >
+            <div className="bg-[#A93710] text-white px-4 py-2 border-2 border-black text-[12px] uppercase tracking-widest font-bold -mt-10 mb-2 shadow-[2px_2px_0px_#000]">
+              GAME OVER
+            </div>
+
+            <div className="text-[12px] text-black font-bold tracking-wider uppercase">
+              YOU CRASHED!
+            </div>
+
+            <div className="text-[16px] text-[#A93710] font-bold tracking-wider uppercase my-2">
+              SCORE: {birdScore}
+            </div>
+
+            <button 
+              tabIndex={-1}
+              onClick={(e) => {
+                e.currentTarget.blur();
+                resetGame(false);
+              }}
+              className="bg-[#E29A2B] hover:bg-[#F0AD3D] border-4 border-black py-2.5 px-6 text-[10px] font-bold text-black uppercase tracking-wider transition-transform hover:-translate-y-1 active:translate-y-0"
+              style={{ boxShadow: "4px 4px 0px 0px #000" }}
+            >
+              REPLAY
+            </button>
+          </div>
+        </div>
       )}
 
     </div>
