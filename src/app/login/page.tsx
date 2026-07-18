@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { Press_Start_2P } from "next/font/google";
 import TurnstileWidget from "@/components/TurnstileWidget";
 import MicLogo from "@/components/MicLogo";
-import BackButton from "@/components/BackButton";
 
 const pressStart = Press_Start_2P({
   weight: "400",
@@ -197,9 +196,6 @@ export default function LoginPage() {
       </div>
 
       <MicLogo />
-
-      {/* Back Button */}
-      <BackButton onClick={() => router.push("/")} />
 
       {/* Login Dialog Box */}
       <div className="relative z-40 w-full max-w-[650px] px-4 animate-pixel-slide-up">
