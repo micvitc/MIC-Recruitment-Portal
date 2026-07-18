@@ -128,18 +128,18 @@ export default function FaqsPage() {
       </div>
 
       {/* ================= CITY BUILDINGS & BUSHES ALONG HORIZON ================= */}
-      <div className="absolute bottom-[60px] md:bottom-[76px] left-0 w-full h-[250px] md:h-[350px] overflow-hidden pointer-events-none z-0 flex items-end">
+      <div className="absolute bottom-[60px] md:bottom-[76px] left-0 w-full h-[280px] md:h-[360px] overflow-hidden pointer-events-none z-0 flex items-end">
         {/* Continuous Large Background Cloud Silhouettes */}
         <div className="absolute bottom-0 left-0 flex w-[3000px] opacity-100">
           <img
             src="/pixel_cloud_large.svg"
             alt="Skyline Back Left"
-            className="w-[1437px] h-[280px] md:h-[360px] object-cover pixelated shrink-0"
+            className="w-[1437px] h-[280px] md:h-[360px] object-cover object-top pixelated shrink-0"
           />
           <img
             src="/pixel_cloud_large.svg"
             alt="Skyline Back Right"
-            className="w-[1510px] h-[280px] md:h-[360px] object-cover pixelated shrink-0"
+            className="w-[1510px] h-[280px] md:h-[360px] object-cover object-top pixelated shrink-0"
           />
         </div>
         {/* Continuous City Skyline */}
@@ -207,10 +207,18 @@ export default function FaqsPage() {
       <button
         onClick={() => {
           playRetroSound("close");
-          router.push("/recruitments");
+          let fallback = "/recruitments";
+          if (typeof window !== "undefined") {
+            const params = new URLSearchParams(window.location.search);
+            const from = params.get("from");
+            if (from) {
+              fallback = from;
+            }
+          }
+          router.push(fallback);
         }}
         className="fixed top-6 right-6 md:right-10 z-50 cursor-pointer hover:scale-110 active:scale-95 transition-transform duration-100 flex items-center justify-center select-none"
-        title="Back to Recruitments"
+        title="Close"
       >
         <img
           src="/Close_icon.svg"

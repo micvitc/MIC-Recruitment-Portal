@@ -236,6 +236,7 @@ export default function RecruitmentsPage() {
   const [isLoadingApp, setIsLoadingApp] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isApplying, setIsApplying] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   // Backend design & dynamic configuration state
   const [techQuests, setTechQuests] = useState<DepartmentData[]>([]);
@@ -299,6 +300,7 @@ export default function RecruitmentsPage() {
         setNonTechQuests(configData.nonTechQuests || []);
         setPageTitle(configData.title || "Recruitments");
         setPageSubtitle(configData.subtitle || "CHOOSE THE QUEST SUITS YOU THE MOST");
+        setIsLoggedIn(!!statusData.user);
       } else {
         if (statusRes.status === 429 || configRes.status === 429) {
           setError("API RATE LIMIT EXCEEDED. PLEASE WAIT A MOMENT AND TRY AGAIN.");
@@ -466,6 +468,11 @@ export default function RecruitmentsPage() {
     setIsApplying(true);
     playRetroSound("select");
     
+    if (!isLoggedIn) {
+      router.push(`/login?callbackUrl=/recruitments`);
+      return;
+    }
+    
     try {
       if (!appStatus) {
         // Init first preference
@@ -526,7 +533,7 @@ export default function RecruitmentsPage() {
         <button
           onClick={() => {
             playRetroSound("open");
-            router.push("/faqs");
+            router.push("/faqs?from=/recruitments");
           }}
           className="bg-[#7CA922] hover:bg-[#8CB932] text-black px-4 py-3 border-4 border-black text-[12px] uppercase tracking-widest font-bold transition-transform hover:-translate-y-1 active:translate-y-0"
           style={{ boxShadow: "4px 4px 0px 0px #000" }}

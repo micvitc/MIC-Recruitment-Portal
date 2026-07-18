@@ -48,16 +48,20 @@ export default function Homepage() {
   const [cycleOpen, setCycleOpen] = useState(true);
   const [pageConfig, setPageConfig] = useState<PageConfig | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   // Fetch recruitment page configuration on mount
   useEffect(() => {
-    fetch("/api/pages/home")
-      .then((res) => res.json())
-      .then((data) => {
+    Promise.all([
+      fetch("/api/pages/home").then((res) => res.json()),
+      fetch("/api/auth/session").then((res) => res.ok ? res.json() : null)
+    ])
+      .then(([data, session]) => {
         if (data.success) {
           setPageConfig(data);
           setCycleOpen(data.cycleOpen);
         }
+        setIsLoggedIn(!!session?.user);
       })
       .catch(() => {})
       .finally(() => {
@@ -212,7 +216,10 @@ export default function Homepage() {
                     
                     {cycleOpen ? (
                       <button
-                      onClick={() => { playRetroSound("select"); router.push("/login"); }}
+                      onClick={() => {
+                        playRetroSound("select");
+                        router.push(isLoggedIn ? "/recruitments" : "/login");
+                      }}
                       className="flex-1 bg-[#52AE26] hover:bg-[#72F418] text-white border-4 border-black py-6 px-6 text-[14px] font-bold tracking-widest transition-transform active:translate-y-1 flex items-center justify-center gap-2 group"
                       style={{ boxShadow: "6px 6px 0px 0px #000" }}
                     >
@@ -280,7 +287,7 @@ export default function Homepage() {
 
         <div className="absolute top-8 right-8 z-30">
           <button
-            onClick={() => { playRetroSound("open"); router.push("/faqs"); }}
+            onClick={() => { playRetroSound("open"); router.push("/faqs?from=/"); }}
             className="bg-[#7CA922] hover:bg-[#8CB932] text-black text-[11px] font-bold py-2 px-5 border-4 border-black cursor-pointer uppercase tracking-wider transition-transform active:translate-y-1"
             style={{ boxShadow: "4px 4px 0px 0px #000" }}
           >

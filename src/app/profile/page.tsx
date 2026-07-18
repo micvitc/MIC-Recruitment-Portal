@@ -86,7 +86,7 @@ function ProfilePage() {
       <div className={`min-h-[100dvh] bg-[#1188EE] pb-20 ${pressStart.variable} font-press-start`}>
         <BackButton onClick={() => router.push("/recruitments")} />
         <div className="flex justify-end p-6 md:px-8 max-w-4xl mx-auto w-full">
-          <button onClick={() => signOut({ callbackUrl: "/login" })} className="flex items-center gap-2 bg-[#A93710] hover:bg-[#E29A2B] text-white px-4 py-2 border-4 border-black text-[10px] sm:text-[12px] uppercase tracking-widest transition-transform hover:-translate-y-1 active:translate-y-0" style={{ boxShadow: "4px 4px 0px 0px #000" }}>
+          <button onClick={() => signOut({ callbackUrl: "/" })} className="flex items-center gap-2 bg-[#A93710] hover:bg-[#E29A2B] text-white px-4 py-2 border-4 border-black text-[10px] sm:text-[12px] uppercase tracking-widest transition-transform hover:-translate-y-1 active:translate-y-0" style={{ boxShadow: "4px 4px 0px 0px #000" }}>
             <LogOut className="h-4 w-4" /> SIGN OUT
           </button>
         </div>
@@ -181,7 +181,7 @@ function ProfilePage() {
     <div className={`min-h-[100dvh] bg-[linear-gradient(180deg,#1188EE_0%,#0E8AEA_25%,#1093EB_35%,#1197EC_46%,#16B6F4_52%,#10CBF1_56%,#0FC6F1_60%,#15DEF0_65%,#15DEF0_81%)] flex flex-col ${pressStart.variable} font-press-start pb-20`}>
       <BackButton onClick={() => router.push("/recruitments")} />
       <div className="flex justify-end p-6 md:px-8 max-w-[1200px] mx-auto w-full">
-        <button onClick={() => signOut({ callbackUrl: "/login" })} className="flex items-center gap-2 bg-[#A93710] hover:bg-[#E29A2B] text-white px-4 py-2 border-4 border-black text-[10px] sm:text-[12px] uppercase tracking-widest transition-transform hover:-translate-y-1 active:translate-y-0" style={{ boxShadow: "4px 4px 0px 0px #000" }}>
+        <button onClick={() => signOut({ callbackUrl: "/" })} className="flex items-center gap-2 bg-[#A93710] hover:bg-[#E29A2B] text-white px-4 py-2 border-4 border-black text-[10px] sm:text-[12px] uppercase tracking-widest transition-transform hover:-translate-y-1 active:translate-y-0" style={{ boxShadow: "4px 4px 0px 0px #000" }}>
           <LogOut className="h-4 w-4" /> SIGN OUT
         </button>
       </div>
