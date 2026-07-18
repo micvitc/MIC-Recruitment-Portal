@@ -8,6 +8,7 @@ import type { FormField, StageConfig } from "@/models/Department";
 import TurnstileWidget from "@/components/TurnstileWidget";
 import posthog from "posthog-js";
 import BackButton from "@/components/BackButton";
+import RetroLoader from "@/components/RetroLoader";
 
 const pressStart = Press_Start_2P({
   weight: "400",
@@ -330,7 +331,8 @@ export default function StagePage({
   const [isEditing, setIsEditing] = useState(false);
   const [cycleOpen, setCycleOpen] = useState(true);
   const [responses, setResponses] = useState<Record<string, unknown>>({});
-  const [loading, setLoading] = useState(true);
+  const [dataLoaded, setDataLoaded] = useState(false);
+  const [showLoader, setShowLoader] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
@@ -425,7 +427,7 @@ export default function StagePage({
       } catch {
         setError("Failed to load stage. Please refresh.");
       } finally {
-        setLoading(false);
+        setDataLoaded(true);
       }
     };
     fetchStage();
@@ -513,14 +515,8 @@ export default function StagePage({
     } catch (e) {}
   };
 
-  if (loading) {
-    return (
-      <div className={`${pressStart.variable} font-press-start min-h-[100dvh] bg-[#DD9955] flex flex-col items-center justify-center`}>
-        <div className="text-white text-[14px] animate-retro-blink uppercase tracking-widest drop-shadow-[2px_2px_0px_#000]">
-          LOADING STAGE...
-        </div>
-      </div>
-    );
+  if (showLoader) {
+    return <RetroLoader isLoading={!dataLoaded} onComplete={() => setShowLoader(false)} title="LOADING STAGE..." />;
   }
 
   if (!stageConfig) {
