@@ -130,9 +130,10 @@ export async function POST(req: NextRequest) {
       success: true,
       message: `Successfully bulk ${action === "advance" ? "advanced" : "rejected"} ${applications.length} applications.`,
     });
-  } catch (err: any) {
+  } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : "Bulk action execution failed.";
     return NextResponse.json(
-      { success: false, error: err.message ?? "Bulk action execution failed." },
+      { success: false, error: errorMessage },
       { status: 500 }
     );
   }

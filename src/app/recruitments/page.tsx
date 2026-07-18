@@ -1,11 +1,13 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { Press_Start_2P } from "next/font/google";
 import DepartmentPopup, { DepartmentData } from "@/components/DepartmentPopup";
 import { Loader2 } from "lucide-react";
 import posthog from "posthog-js";
+import RetroLoader from "@/components/RetroLoader";
+import MicLogo from "@/components/MicLogo";
 
 const pressStart = Press_Start_2P({
   weight: "400",
@@ -37,7 +39,7 @@ function QuestCard({ title, desc, role, state, progressStatus, onSelect }: Quest
       onClick={isDisabled ? undefined : onSelect}
       className={`w-[371px] h-[262px] flex flex-col items-start p-1 rounded-[10px] border-4 border-solid border-black relative shrink-0 select-none transition-all duration-150 ${
         isDisabled
-          ? "bg-[#FFB59F] opacity-90"
+          ? "bg-[#FFB59F]"
           : isSelected
           ? "bg-white cursor-pointer hover:-translate-y-3 hover:scale-[1.02] active:translate-y-0 active:scale-[0.98]"
           : "bg-[#FFB59F] cursor-pointer hover:-translate-y-3 hover:scale-[1.02] active:translate-y-0 active:scale-[0.98]"
@@ -46,7 +48,7 @@ function QuestCard({ title, desc, role, state, progressStatus, onSelect }: Quest
     >
       {/* Card Header Tag */}
       <div className={`flex flex-col items-center py-2 relative self-stretch w-full rounded-[6px] border-b-4 border-solid border-black ${isSelected ? "bg-[#E29A2B]" : "bg-[#A93710]"}`}>
-        <div className="relative flex items-center justify-center w-fit text-black font-bold text-[12px] tracking-wider uppercase leading-none whitespace-nowrap">
+        <div className="relative flex items-center justify-center w-fit text-white drop-shadow-[2px_2px_0px_#000] font-bold text-[12px] tracking-wider uppercase leading-none whitespace-nowrap">
           {title}
         </div>
       </div>
@@ -54,7 +56,7 @@ function QuestCard({ title, desc, role, state, progressStatus, onSelect }: Quest
       {/* Inner White Box */}
       <div className={`flex-grow w-full p-3 rounded-b-[6px] flex items-center justify-center ${isSelected ? "bg-[#FFF4E6]" : "bg-[#FFDED6]"}`}>
         <div className={`w-full h-full ${isDisabled ? "bg-[#FFCDC0]" : "bg-white"} border-4 border-solid border-black p-3.5 flex flex-col items-center justify-center text-center ${isSelected ? "gap-4" : ""}`}>
-          <p className="text-[10px] text-black font-bold tracking-wide leading-relaxed uppercase">
+          <p className={`text-[10px] font-bold tracking-wide leading-relaxed uppercase ${isDisabled ? "text-[#A93710] drop-shadow-[1px_1px_0px_#fff]" : "text-black"}`}>
             {isDisabled ? "YOU HAVE ALREADY APPLIED FOR A SIMILAR QUEST" : isSelected ? "WANNA RECHECK YOUR GEAR FOR THE QUEST?" : desc}
           </p>
           
@@ -83,16 +85,19 @@ function QuestCard({ title, desc, role, state, progressStatus, onSelect }: Quest
 
 function RetroPipe({ height, top, left, isTop }: { height: number; top: string; left: string; isTop: boolean }) {
   return (
-    <img
-      src="/green_pipe.svg"
-      alt="Pipe"
+    <div
       className="absolute select-none pointer-events-none z-10 w-[52px] pixelated"
       style={{
         left,
         top,
         height: `${height}px`,
         transform: isTop ? "none" : "scaleY(-1)",
-        objectFit: "fill",
+        borderStyle: "solid",
+        borderWidth: "0 0 24px 0",
+        borderColor: "transparent",
+        borderImageSource: "url(/green_pipe.png)",
+        borderImageSlice: "0 0 64 0 fill",
+        borderImageRepeat: "stretch",
       }}
     />
   );
@@ -124,6 +129,89 @@ function NormalArrow({ top, left, width = 50, height = 30 }: { top: string; left
     </div>
   );
 }
+interface StageProgress {
+  stage: number;
+  result: "pending" | "passed" | "failed";
+  submittedAt: string;
+  adminNote?: string;
+  responses: Record<string, unknown>;
+}
+
+interface ApplicationStatus {
+  overallStatus: "in-progress" | "selected" | "rejected" | "waitlisted";
+  firstPreference: string;
+  firstPrefType: "tech" | "non-tech";
+  secondPreference?: string;
+  secondPrefType?: "tech" | "non-tech";
+  firstPrefProgress: {
+    status: "active" | "passed" | "rejected" | "pending";
+    currentStage: number;
+    stages: StageProgress[];
+  };
+  secondPrefProgress: {
+    status: "active" | "passed" | "rejected" | "pending";
+    currentStage: number;
+    stages: StageProgress[];
+  };
+}
+
+function playRetroSound(type: "select" | "jump" | "open" | "close" | "die") {
+  if (typeof window === "undefined") return;
+  try {
+    const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextClass) return;
+    const ctx = new AudioContextClass();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    if (type === "jump") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(400, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.1, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.15);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.15);
+    } else if (type === "select") {
+      osc.type = "square";
+      osc.frequency.setValueAtTime(600, ctx.currentTime);
+      osc.frequency.setValueAtTime(900, ctx.currentTime + 0.08);
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.2);
+    } else if (type === "open") {
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(300, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(600, ctx.currentTime + 0.2);
+      gain.gain.setValueAtTime(0.05, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.25);
+    } else if (type === "close") {
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(600, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.2);
+      gain.gain.setValueAtTime(0.05, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.25);
+    } else if (type === "die") {
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(150, ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.4);
+      gain.gain.setValueAtTime(0.1, ctx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.4);
+    }
+  } catch (e) {
+    console.warn("Audio Context failed", e);
+  }
+}
+
 
 export default function RecruitmentsPage() {
   const router = useRouter();
@@ -143,10 +231,18 @@ export default function RecruitmentsPage() {
   const [isScrollingLeft, setIsScrollingLeft] = useState(false);
 
   // Application State
-  const [appStatus, setAppStatus] = useState<any>(null);
+  const [appStatus, setAppStatus] = useState<ApplicationStatus | null>(null);
+  const [user, setUser] = useState<{ id: string } | null>(null);
   const [isLoadingApp, setIsLoadingApp] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isApplying, setIsApplying] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // Backend design & dynamic configuration state
+  const [techQuests, setTechQuests] = useState<DepartmentData[]>([]);
+  const [nonTechQuests, setNonTechQuests] = useState<DepartmentData[]>([]);
+  const [pageTitle, setPageTitle] = useState("Recruitments");
+  const [pageSubtitle, setPageSubtitle] = useState("CHOOSE THE QUEST SUITS YOU THE MOST");
 
   const birdPhysicsRef = useRef({
     currentX: 0,
@@ -185,33 +281,54 @@ export default function RecruitmentsPage() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const fetchStatus = async () => {
+  const fetchStatus = useCallback(async () => {
     setIsLoadingApp(true);
     setError(null);
     try {
-      const res = await fetch(`/api/apply/status?t=${Date.now()}`);
-      if (res.ok) {
-        const data = await res.json();
-        setAppStatus(data.application);
+      const [statusRes, configRes] = await Promise.all([
+        fetch(`/api/apply/status?t=${Date.now()}`),
+        fetch(`/api/pages/recruitments?t=${Date.now()}`)
+      ]);
+
+      if (statusRes.ok && configRes.ok) {
+        const statusData = await statusRes.json();
+        const configData = await configRes.json();
+        
+        setAppStatus(statusData.application);
+        setUser(statusData.user);
+        setTechQuests(configData.techQuests || []);
+        setNonTechQuests(configData.nonTechQuests || []);
+        setPageTitle(configData.title || "Recruitments");
+        setPageSubtitle(configData.subtitle || "CHOOSE THE QUEST SUITS YOU THE MOST");
+        setIsLoggedIn(!!statusData.user);
       } else {
-        if (res.status === 429) {
+        if (statusRes.status === 429 || configRes.status === 429) {
           setError("API RATE LIMIT EXCEEDED. PLEASE WAIT A MOMENT AND TRY AGAIN.");
         } else {
           setError("FAILED TO CONNECT TO SERVER. PLEASE RETRY.");
         }
       }
     } catch (err) {
-      console.error("Failed to fetch application status");
+      console.error("Failed to fetch page configuration & status", err);
       setError("NETWORK ERROR. PLEASE CHECK YOUR CONNECTION.");
     } finally {
       setIsLoadingApp(false);
     }
-  };
+  }, []);
 
   // Fetch application status
   useEffect(() => {
-    fetchStatus();
-  }, []);
+    let active = true;
+    const init = async () => {
+      if (active) {
+        await fetchStatus();
+      }
+    };
+    init();
+    return () => {
+      active = false;
+    };
+  }, [fetchStatus]);
 
   // Ultra-Smooth GPU Physics Engine for Flappy Bird (native 60/120fps camera follow & jump arcs)
   useEffect(() => {
@@ -229,7 +346,7 @@ export default function RecruitmentsPage() {
         // 2. Vertical Floating Breathing Bob & Flapping Jump Physics
         const baseFloatY = Math.sin(p.time) * 11; // Smooth 11px sine wave hover
         let totalY = baseFloatY + p.currentY;
-        let tiltAngle = Math.max(-25, Math.min(30, p.velocityY * 2));
+        const tiltAngle = Math.max(-25, Math.min(30, p.velocityY * 2));
 
         if (!p.isDead) {
           if (p.velocityY !== 0 || Math.abs(p.currentY) > 0.05) {
@@ -294,6 +411,23 @@ export default function RecruitmentsPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
+  // Map vertical wheel scroll to horizontal scroll
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      // Only map if vertical scroll is dominant
+      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+        e.preventDefault();
+        container.scrollBy({ left: e.deltaY, behavior: "auto" });
+      }
+    };
+
+    container.addEventListener("wheel", handleWheel, { passive: false });
+    return () => container.removeEventListener("wheel", handleWheel);
+  }, []);
+
   const handleOpenPopup = (quest: DepartmentData, type: "tech" | "non-tech", slug: string) => {
     if (isLoadingApp) return;
 
@@ -325,8 +459,19 @@ export default function RecruitmentsPage() {
 
   const handleApplyFromPopup = async (role: string) => {
     if (isApplying) return;
+    
+    if (!user) {
+      router.push("/login?callbackUrl=/recruitments");
+      return;
+    }
+
     setIsApplying(true);
     playRetroSound("select");
+    
+    if (!isLoggedIn) {
+      router.push(`/login?callbackUrl=/recruitments`);
+      return;
+    }
     
     try {
       if (!appStatus) {
@@ -373,171 +518,79 @@ export default function RecruitmentsPage() {
     birdPhysicsRef.current.velocityY = -15; // Smooth instant upward jump arc in GPU physics loop
   };
 
-  const playRetroSound = (type: "select" | "jump" | "open" | "close" | "die") => {
-    if (typeof window === "undefined") return;
-    try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
 
-      if (type === "jump") {
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(400, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.15);
-        gain.gain.setValueAtTime(0.1, ctx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.15);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.15);
-      } else if (type === "select") {
-        osc.type = "square";
-        osc.frequency.setValueAtTime(600, ctx.currentTime);
-        osc.frequency.setValueAtTime(900, ctx.currentTime + 0.08);
-        gain.gain.setValueAtTime(0.08, ctx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.2);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.2);
-      } else if (type === "open") {
-        osc.type = "sawtooth";
-        osc.frequency.setValueAtTime(300, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(600, ctx.currentTime + 0.2);
-        gain.gain.setValueAtTime(0.05, ctx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.25);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.25);
-      } else if (type === "close") {
-        osc.type = "sawtooth";
-        osc.frequency.setValueAtTime(600, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.2);
-        gain.gain.setValueAtTime(0.05, ctx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.25);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.25);
-      } else if (type === "die") {
-        osc.type = "sawtooth";
-        osc.frequency.setValueAtTime(150, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.4);
-        gain.gain.setValueAtTime(0.1, ctx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.4);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.4);
-      }
-    } catch (e) {
-      console.warn("Audio Context failed", e);
-    }
-  };
 
-  const techQuests: DepartmentData[] = [
-    {
-      title: "DEVELOPMENT",
-      desc: "CONSTRUCTING SYSTEMS/PRODUCTS THAT NEED TO STAND, SCALE, AND FUNCTION RELIABLY",
-      subtitle: "CONSTRUCTING SYSTEMS/PRODUCTS THAT NEED TO STAND, SCALE, AND FUNCTION RELIABLY.",
-      role: "Development",
-      iconType: "dev",
-      tagline: "BUILDING THE ARCHITECTURE AND CORE MOTORS THAT POWER DIGITAL PRODUCTS AND PLATFORMS",
-      description: "FROM FRONTEND WIZARDRY TO ROBUST BACKEND PIPELINES, JOIN DEVELOPMENT TO WRITE CLEAN CODE, SOLVE REAL-WORLD ENGINEERING PROBLEMS, AND SHIP PRODUCTION-READY APPS.",
-      skills: "REACT · NEXT.JS · NODE.JS · SYSTEM DESIGN",
-    },
-    {
-      title: "COMPETITIVE CODING",
-      desc: "LITERALLY ADVERSARIAL/COMPETITIVE, PUZZLE-SOLVING UNDER RULES AND TIME PRESSURE",
-      subtitle: "LITERALLY ADVERSARIAL/COMPETITIVE, PUZZLE-SOLVING UNDER RULES AND TIME PRESSURE.",
-      role: "Competitive Coding",
-      iconType: "cc",
-      tagline: "MASTERING ALGORITHMS, DATA STRUCTURES, AND SPEED TO CONQUER COMPLEX LOGICAL CHALLENGES",
-      description: "LOVE CRUSHING TIMEOUTS AND OPTIMIZING CODE TO O(1)? JOIN COMPETITIVE CODING TO TRAIN FOR HACKATHONS, ICPC, CONTESTS, AND BECOME AN ALGORITHMIC NINJA.",
-      skills: "C++ · PYTHON · DSA · DYNAMIC PROGRAMMING",
-    },
-    {
-      title: "UI/UX",
-      desc: "DESIGNING STRUCTURAL FLOWS AND SYSTEMS USERS NAVIGATE — ARCHITECTURE OF EXPERIENCE",
-      subtitle: "DESIGNING STRUCTURAL FLOWS AND SYSTEMS USERS NAVIGATE — ARCHITECTURE OF EXPERIENCE.",
-      role: "UI/UX",
-      iconType: "uiux",
-      tagline: "UI/UX IS ABOUT GUIDING USERS THROUGH A STRUCTURE/FLOW, HELPING THEM NAVIGATE WITHOUT GETTING LOST",
-      description: "PASSIONATE ABOUT HOW THINGS LOOK AND FEEL? JOIN UI/UX AND HELP DESIGN THE INTERFACES AND EXPERIENCES THAT CONNECT PEOPLE TO TECHNOLOGY — ONE THOUGHTFUL PIXEL AND FLOW AT A TIME.",
-      skills: "FIGMA · UI CRAFT · FRAMES",
-    },
-    {
-      title: "AI/ML",
-      desc: "HEAVY EXPERIMENTATION, ITERATION, TINKERING WITH MODELS/DATA UNTIL SOMETHING WORKS — CRAFT-DRIVEN",
-      subtitle: "HEAVY EXPERIMENTATION, ITERATION, TINKERING WITH MODELS/DATA UNTIL SOMETHING WORKS — CRAFT-DRIVEN.",
-      role: "AI/ML",
-      iconType: "aiml",
-      tagline: "TEACHING MACHINES TO LEARN, PREDICT, AND REASON THROUGH DATA AND NEURAL ARCHITECTURES",
-      description: "FASCINATED BY LLMS, COMPUTER VISION, AND DEEP LEARNING? JOIN AI/ML TO BUILD INTELLIGENT AGENTS, TRAIN NEURAL NETWORKS, AND PUSH THE FRONTIERS OF AI.",
-      skills: "PYTORCH · TENSORFLOW · LLMS · DATA SCIENCE",
-    },
-    {
-      title: "CYBER SECURITY",
-      desc: "ATTACKER-VS-DEFENDER MINDSET, CTF CULTURE, EXPLOITING/PATCHING CAT-AND-MOUSE",
-      subtitle: "ATTACKER-VS-DEFENDER MINDSET, CTF CULTURE, EXPLOITING/PATCHING CAT-AND-MOUSE.",
-      role: "Cyber Security",
-      iconType: "cyber",
-      tagline: "PROTECTING DIGITAL ASSETS, ETHICAL HACKING, AND MASTERING THE ART OF DEFENSE AND OFFENSE",
-      description: "READY TO CRACK CODES AND DEFEND SYSTEMS? JOIN CYBER SECURITY TO COMPETE IN CAPTURE-THE-FLAG (CTF) CONTESTS, PERFORM VULNERABILITY ASSESSMENTS, AND LEARN NETWORK SECURITY.",
-      skills: "CTF · ETHICAL HACKING · CRYPTOGRAPHY · PEN TESTING",
-    },
-  ];
-
-  const nonTechQuests: DepartmentData[] = [
-    {
-      title: "DESIGN",
-      desc: "CRAFTING THE CLUB'S VISUAL IDENTITIES, MERCHANDISE, POSTERS, AND DIGITAL ART.",
-      subtitle: "CRAFTING THE CLUB'S VISUAL IDENTITIES, MERCHANDISE, POSTERS, AND DIGITAL ART.",
-      role: "Design",
-      iconType: "design",
-      tagline: "COMMUNICATING IDEAS AND STORIES THROUGH VISUAL ART, BRANDING, AND GRAPHIC MASTERY",
-      description: "HAVE AN EYE FOR COLOR, TYPOGRAPHY, AND COMPOSITION? JOIN THE DESIGN QUEST TO CREATE STUNNING POSTERS, SOCIAL MEDIA ASSETS, AND BRANDING THAT DEFINE MIC.",
-      skills: "PHOTOSHOP · ILLUSTRATOR · GRAPHIC ART · BRANDING",
-    },
-    {
-      title: "MANAGEMENT",
-      desc: "THE BACKBONE OF CLUB OPERATIONS, EVENT LOGISTICS, AND PEOPLE LEADERSHIP.",
-      subtitle: "THE BACKBONE OF CLUB OPERATIONS, EVENT LOGISTICS, AND PEOPLE LEADERSHIP.",
-      role: "Management",
-      iconType: "mgmt",
-      tagline: "ORCHESTRATING EVENTS, LEADING TEAMS, AND TURNING BIG IDEAS INTO SEAMLESS EXECUTION",
-      description: "THRIVE ON LEADERSHIP, STRATEGY, AND ORGANIZING HACKATHONS AND WORKSHOPS? JOIN MANAGEMENT TO DIRECT MAJOR EVENTS, MANAGE LOGISTICS, AND CONNECT THE TECH ECOSYSTEM.",
-      skills: "EVENT MANAGEMENT · STRATEGY · LEADERSHIP · OPERATIONS",
-    },
-    {
-      title: "ENTREPRENEURSHIP",
-      desc: "INNOVATION MEETS BUSINESS STRATEGY, PRODUCT MARKET FIT, AND PITCH DECKS.",
-      subtitle: "INNOVATION MEETS BUSINESS STRATEGY, PRODUCT MARKET FIT, AND PITCH DECKS.",
-      role: "Entrepreneurship",
-      iconType: "ep",
-      tagline: "IDENTIFYING MARKET GAPS, PITCHING VENTURES, AND TRANSFORMING PROJECTS INTO STARTUPS",
-      description: "DREAM OF LAUNCHING YOUR OWN STARTUP? JOIN ENTREPRENEURSHIP TO LEARN PITCHING, BUSINESS MODELS, PRODUCT INCUBATION, AND BUILD THE NEXT GENERATION OF DISRUPTIVE VENTURES.",
-      skills: "PITCHING · BUSINESS STRATEGY · PRODUCT INCUBATION",
-    },
-    {
-      title: "CONTENT & MEDIA",
-      desc: "CONTENT CREATION, VIDEO PRODUCTION, SOCIAL MEDIA PRESENCE, AND PUBLIC RELATIONS.",
-      subtitle: "CONTENT CREATION, VIDEO PRODUCTION, SOCIAL MEDIA PRESENCE, AND PUBLIC RELATIONS.",
-      role: "Content & Media",
-      iconType: "media",
-      tagline: "CAPTURING STORIES, DIRECTING MEDIA, AND CRAFTING COMPELLING NARRATIVES FOR THE WORLD",
-      description: "PASSIONATE ABOUT FILMING, EDITING, COPYWRITING, AND SOCIAL MEDIA? JOIN CONTENT & MEDIA TO BROADCAST MIC'S IMPACT, DIRECT CREATIVE REELS, AND ENGAGE OUR COMMUNITY.",
-      skills: "VIDEO EDITING · COPYWRITING · SOCIAL MEDIA · PR",
-    },
-  ];
+  // Dynamic quests lists are fetched from backend on load
 
   return (
     <div
-      className={`${pressStart.variable} font-press-start w-full h-screen overflow-x-auto overflow-y-hidden retro-scrollbar select-none bg-[#DD9955] relative`}
+      className={`${pressStart.variable} font-press-start w-full h-[100dvh] overflow-x-auto overflow-y-hidden retro-scrollbar select-none bg-[#DD9955] relative`}
       ref={scrollContainerRef}
       onScroll={handleScroll}
     >
-      {/* Profile Button */}
-      <button
-        onClick={() => router.push("/profile")}
-        className="fixed top-6 right-6 z-50 bg-[#1093EB] hover:bg-[#16B6F4] text-white px-4 py-3 border-4 border-black text-[12px] uppercase tracking-widest font-bold transition-transform hover:-translate-y-1 active:translate-y-0"
-        style={{ boxShadow: "4px 4px 0px 0px #000" }}
+      {/* Floating Header Buttons (Fixed) */}
+      <div className="fixed top-6 right-6 z-50 flex items-center gap-4">
+        <button
+          onClick={() => {
+            playRetroSound("open");
+            router.push("/faqs?from=/recruitments");
+          }}
+          className="bg-[#7CA922] hover:bg-[#8CB932] text-black px-4 py-3 border-4 border-black text-[12px] uppercase tracking-widest font-bold transition-transform hover:-translate-y-1 active:translate-y-0"
+          style={{ boxShadow: "4px 4px 0px 0px #000" }}
+        >
+          FAQS
+        </button>
+        {user ? (
+          <button
+            onClick={() => router.push("/profile")}
+            className="bg-[#1093EB] hover:bg-[#16B6F4] text-white px-4 py-3 border-4 border-black text-[12px] uppercase tracking-widest font-bold transition-transform hover:-translate-y-1 active:translate-y-0"
+            style={{ boxShadow: "4px 4px 0px 0px #000" }}
+          >
+            VIEW PROFILE
+          </button>
+        ) : (
+          <button
+            onClick={() => router.push("/login?callbackUrl=/recruitments")}
+            className="bg-[#1093EB] hover:bg-[#16B6F4] text-white px-4 py-3 border-4 border-black text-[12px] uppercase tracking-widest font-bold transition-transform hover:-translate-y-1 active:translate-y-0 flex items-center gap-2"
+            style={{ boxShadow: "4px 4px 0px 0px #000" }}
+          >
+            <div className="bg-white rounded-full p-[2px] flex items-center justify-center">
+              <svg width="12" height="12" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+              </svg>
+            </div>
+            SIGN IN
+          </button>
+        )}
+      </div>
+
+      {/* Fixed Title Banner */}
+      <div 
+        className="fixed z-40 origin-top-left pointer-events-none"
+        style={{ 
+          left: `${320 * scale}px`, 
+          top: `${24 * scale}px`, 
+          transform: `scale(${scale})` 
+        }}
       >
-        View Profile
-      </button>
+        <div 
+          className="bg-black border-4 border-black px-8 py-6 flex flex-col items-start justify-center pointer-events-auto" 
+          style={{ boxShadow: "8px 8px 0px 0px rgba(0,0,0,0.5)" }}
+        >
+          <h1 className="font-normal text-white text-[64px] tracking-[0] leading-[67px] uppercase whitespace-nowrap">
+            {pageTitle}
+          </h1>
+          <p className="text-[12px] text-white font-bold tracking-[0] leading-[21px] mt-2 uppercase">
+            {pageSubtitle}
+          </p>
+        </div>
+      </div>
+
+      {/* Fixed Logo */}
+      <MicLogo />
       {error && (
         <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center p-4">
           <div className="bg-[#FFE4D6] border-4 border-black p-8 max-w-lg w-full relative flex flex-col items-center gap-6" style={{ boxShadow: "8px 8px 0px 0px rgba(0,0,0,0.5)" }}>
@@ -562,15 +615,7 @@ export default function RecruitmentsPage() {
         </div>
       )}
 
-      {!error && isLoadingApp && (
-        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center">
-          <div className="bg-[#B87B21] border-4 border-black p-6 flex items-center justify-center" style={{ boxShadow: "6px 6px 0px 0px #000" }}>
-            <div className="text-white text-[14px] animate-retro-blink uppercase tracking-widest drop-shadow-[2px_2px_0px_#000]">
-              LOADING MAP...
-            </div>
-          </div>
-        </div>
-      )}
+      <RetroLoader isLoading={isLoadingApp} title="LOADING MAP" />
 
       {/* Sized container to calculate correct scroll boundaries post-scaling */}
       <div
@@ -648,22 +693,21 @@ export default function RecruitmentsPage() {
               style={{ left: `${idx * 245}px` }}
             />
           ))}
-          {/* Green Bushes Silhouettes (Figma Positions) */}
-          <img
-            src="/bushes_pixel.svg"
-            alt="Bushes Left"
-            className="absolute top-[739px] left-0 w-[1456px] h-[200px] z-4 pointer-events-none select-none pixelated"
-          />
-          <img
-            src="/bushes_pixel.svg"
-            alt="Bushes Right"
-            className="absolute top-[739px] left-[1409px] w-[1456px] h-[200px] z-4 pointer-events-none select-none pixelated"
-          />
+          {/* Green Bushes Silhouettes (Continuous without gaps across 2865px canvas) */}
+          {Array.from({ length: 3 }).map((_, idx) => (
+            <img
+              key={`bush-${idx}`}
+              src="/bushes_pixel.svg"
+              alt={`Bushes ${idx}`}
+              className="absolute top-[739px] w-[1456px] h-[200px] z-4 pointer-events-none select-none pixelated"
+              style={{ left: `${idx * 1409}px` }}
+            />
+          ))}
 
           {/* Green Mario Pipes (Exact Figma Positions & Heights) */}
           {/* Top Pipes (pointing down) */}
           <RetroPipe left="169px" top="-4px" height={391} isTop={true} />
-          <RetroPipe left="746px" top="199px" height={264} isTop={true} />
+          <RetroPipe left="746px" top="-5px" height={468} isTop={true} />
           <RetroPipe left="1234px" top="-5px" height={443} isTop={true} />
           <RetroPipe left="1723px" top="0px" height={391} isTop={true} />
           <RetroPipe left="2214px" top="-1px" height={461} isTop={true} />
@@ -676,28 +720,9 @@ export default function RecruitmentsPage() {
           <RetroPipe left="1885px" top="570px" height={333} isTop={false} />
           <RetroPipe left="2375px" top="602px" height={301} isTop={false} />
 
-          {/* ================= FIXED FLOATING CONTROLS (z-30) ================= */}
-          {/* MIC Logo (Standalone without background or text, slightly reduced size) */}
-          <img
-            src="/mic_logo_pixel.png"
-            alt="MIC Logo"
-            className="absolute z-30 pixelated select-none pointer-events-none"
-            style={{ left: "64px", top: "24px", width: "110px", height: "79px" }}
-          />
 
-          {/* FAQs Button */}
-          <div className="absolute left-1/2 -translate-x-1/2 top-8 z-30">
-            <button
-              onClick={() => {
-                playRetroSound("open");
-                router.push("/faqs");
-              }}
-              className="bg-[#7CA922] hover:bg-[#8CB932] text-black text-[11px] font-bold py-2 px-5 border-4 border-black cursor-pointer uppercase tracking-wider font-press-start"
-              style={{ boxShadow: "4px 4px 0px 0px #000" }}
-            >
-              FAQS
-            </button>
-          </div>
+
+
 
 
 
@@ -708,15 +733,7 @@ export default function RecruitmentsPage() {
             </div>
           )}
 
-          {/* ================= MAIN CONTENT & TITLE (z-20) ================= */}
-          <div className="absolute text-left z-20" style={{ left: "406px", top: "82px" }}>
-            <h1 className="font-normal text-black text-[64px] tracking-[0] leading-[67px] uppercase whitespace-nowrap">
-              Recruitments
-            </h1>
-            <p className="text-[12px] text-black font-bold tracking-[0] leading-[21px] mt-1.5 uppercase">
-              CHOOSE THE QUEST SUITS YOU THE MOST
-            </p>
-          </div>
+
 
           {/* Interactive Flappy Bird Character (Ultra-Smooth 60/120fps GPU Physics Engine) */}
           <div 
@@ -742,13 +759,16 @@ export default function RecruitmentsPage() {
           {/* ================= TECH ROW ================= */}
           {/* Tech signboard */}
           <div 
-            className="absolute shadow-[4px_4px_0px_#00000040] z-20"
-            style={{ left: "64px", top: "313px", width: "240px", height: "80px" }}
+            className="absolute bg-[#B87B21] text-black text-[22px] font-bold border-4 border-black z-20 flex items-center justify-center uppercase tracking-wider"
+            style={{ 
+              left: "64px", 
+              top: "313px", 
+              width: "240px", 
+              height: "80px",
+              boxShadow: "6px 6px 0px 0px #000"
+            }}
           >
-            <div className="absolute w-[99.17%] h-full top-0 left-0 bg-[#B87B21]" />
-            <div className="absolute w-[80.00%] h-[62.50%] top-[18.75%] left-[9.58%] font-normal text-black text-2xl text-center tracking-[0] leading-none flex items-center justify-center h-[50px] uppercase">
-              Tech
-            </div>
+            TECH
           </div>
 
           <NormalArrow top="338px" left="305px" width={44} height={28} />
@@ -790,15 +810,18 @@ export default function RecruitmentsPage() {
           })}
 
           {/* ================= NON-TECH ROW ================= */}
-          {/* Non Tech signboard (Width reduced from 422px down to 280px) */}
+          {/* Non Tech signboard */}
           <div 
-            className="absolute shadow-[4px_4px_0px_#00000040] z-20"
-            style={{ left: "64px", top: "588px", width: "280px", height: "80px" }}
+            className="absolute bg-[#B87B21] text-black text-[22px] font-bold border-4 border-black z-20 flex items-center justify-center uppercase tracking-wider"
+            style={{ 
+              left: "64px", 
+              top: "588px", 
+              width: "280px", 
+              height: "80px",
+              boxShadow: "6px 6px 0px 0px #000"
+            }}
           >
-            <div className="absolute w-[99.17%] h-full top-0 left-0 bg-[#B87B21]" />
-            <div className="absolute w-[85.00%] h-[62.50%] top-[18.75%] left-[7.50%] font-normal text-black text-2xl text-center tracking-[0] leading-none flex items-center justify-center h-[50px] uppercase">
-              Non Tech
-            </div>
+            NON TECH
           </div>
 
           <NormalArrow top="613px" left="365px" width={64} height={32} />
@@ -849,14 +872,24 @@ export default function RecruitmentsPage() {
             {/* Soil Base with Marquee Text (Extends down so scrollbar sits cleanly on dirt track without sky blue gaps) */}
             <div className="w-full flex-grow bg-[#DD9955] border-b-4 border-black relative overflow-hidden flex items-start pt-3">
               {/* Seamless Infinite Scrolling Text */}
-              <div className="flex whitespace-nowrap animate-marquee">
-                <span className="inline-block text-[24px] text-[#CC7700] tracking-wider uppercase font-bold pr-10">
-                  {Array(6).fill("MICROSOFT INNOVATIONS CLUB TENURE 2026-2027").join("  ★  ")}
-                </span>
-                <span className="inline-block text-[24px] text-[#CC7700] tracking-wider uppercase font-bold pr-10">
-                  {Array(6).fill("MICROSOFT INNOVATIONS CLUB TENURE 2026-2027").join("  ★  ")}
-                </span>
-              </div>
+                <div className="flex whitespace-nowrap animate-marquee">
+                  <span className="inline-flex items-center shrink-0 text-[24px] text-[#CC7700] tracking-wider uppercase font-bold">
+                    {Array(6).fill("MICROSOFT INNOVATIONS CLUB TENURE 2026-2027").map((text, idx) => (
+                      <React.Fragment key={idx}>
+                        <span>{text}</span>
+                        <img src="/mic_logo_pixel.png" alt="MIC" className="w-8 h-8 md:w-10 md:h-10 mx-8 shrink-0" />
+                      </React.Fragment>
+                    ))}
+                  </span>
+                  <span className="inline-flex items-center shrink-0 text-[24px] text-[#CC7700] tracking-wider uppercase font-bold">
+                    {Array(6).fill("MICROSOFT INNOVATIONS CLUB TENURE 2026-2027").map((text, idx) => (
+                      <React.Fragment key={idx}>
+                        <span>{text}</span>
+                        <img src="/mic_logo_pixel.png" alt="MIC" className="w-8 h-8 md:w-10 md:h-10 mx-8 shrink-0" />
+                      </React.Fragment>
+                    ))}
+                  </span>
+                </div>
             </div>
           </div>
 

@@ -15,6 +15,7 @@
   --animate-marquee: marquee 30s linear infinite;
   --animate-marquee-reverse: marquee-reverse 45s linear infinite;
   --animate-retro-float: retro-float 3s ease-in-out infinite;
+  --animate-retro-float-small: retro-float-small 3s ease-in-out infinite;
   --animate-cloud-float-slow: cloud-float 25s linear infinite;
   --animate-cloud-float-fast: cloud-float 15s linear infinite;
   --animate-accordion-down: accordion-down 0.2s ease-out;
@@ -31,6 +32,10 @@
   @keyframes retro-float {
     0%, 100% { transform: translateY(0px); }
     50% { transform: translateY(-12px); }
+  }
+  @keyframes retro-float-small {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-4px); }
   }
   @keyframes cloud-float {
     0% { transform: translateX(100vw); }
@@ -91,8 +96,9 @@ body {
 }
 
 .pixelated {
-  image-rendering: pixelated;
+  image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
+  image-rendering: pixelated;
 }
 
 .retro-shadow {

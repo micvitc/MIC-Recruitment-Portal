@@ -5,6 +5,8 @@ import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Press_Start_2P } from "next/font/google";
 import TurnstileWidget from "@/components/TurnstileWidget";
+import MicLogo from "@/components/MicLogo";
+import BackButton from "@/components/BackButton";
 
 const pressStart = Press_Start_2P({
   weight: "400",
@@ -16,16 +18,19 @@ const pressStart = Press_Start_2P({
 
 function RetroPipe({ height, top, left, isTop }: { height: number; top: string; left: string; isTop: boolean }) {
   return (
-    <img
-      src="/green_pipe.svg"
-      alt="Pipe"
+    <div
       className="absolute select-none pointer-events-none z-10 w-[52px] pixelated"
       style={{
         left,
         top,
         height: `${height}px`,
         transform: isTop ? "none" : "scaleY(-1)",
-        objectFit: "fill",
+        borderStyle: "solid",
+        borderWidth: "0 0 24px 0",
+        borderColor: "transparent",
+        borderImageSource: "url(/green_pipe.png)",
+        borderImageSlice: "0 0 64 0 fill",
+        borderImageRepeat: "repeat",
       }}
     />
   );
@@ -86,7 +91,9 @@ export default function LoginPage() {
   const playRetroSound = () => {
     if (typeof window === "undefined") return;
     try {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioContextClass) return;
+      const ctx = new AudioContextClass();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.connect(gain);
@@ -102,7 +109,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className={`${pressStart.variable} font-press-start w-full h-screen overflow-hidden select-none bg-[#DD9955] relative flex justify-center items-center`}>
+    <div className={`${pressStart.variable} font-press-start w-full h-[100dvh] overflow-hidden select-none bg-[#DD9955] relative flex justify-center items-center`}>
       {/* Absolute positioned scaled background container centered horizontally */}
       <div
         className="absolute top-0 left-1/2 -translate-x-1/2"
@@ -115,25 +122,50 @@ export default function LoginPage() {
       >
         <div className="w-[2865px] h-[1024px] absolute top-0 left-0 bg-[linear-gradient(180deg,#1188EE_0%,#0E8AEA_25%,#1093EB_35%,#1197EC_46%,#16B6F4_52%,#10CBF1_56%,#0FC6F1_60%,#15DEF0_65%,#15DEF0_81%)] overflow-hidden">
           
-          <img src="/pixel_cloud_small.svg" alt="Cloud" className="absolute top-[300px] left-[1060px] w-[280px] opacity-85 animate-retro-float pixelated select-none pointer-events-none" style={{ animationDelay: "0s" }} />
-          <img src="/pixel_cloud_small.svg" alt="Cloud" className="absolute top-[140px] left-[-40px] w-[320px] opacity-80 animate-retro-float pixelated select-none pointer-events-none" style={{ animationDelay: "1s" }} />
-          <img src="/pixel_cloud_small.svg" alt="Cloud" className="absolute top-[39px] left-[1167px] w-[360px] opacity-90 animate-retro-float pixelated select-none pointer-events-none" style={{ animationDelay: "0.5s" }} />
-          <img src="/pixel_cloud_small.svg" alt="Cloud" className="absolute top-[333px] left-[2509px] w-[260px] opacity-75 animate-retro-float pixelated select-none pointer-events-none" style={{ animationDelay: "1.8s" }} />
-          <img src="/pixel_cloud_small.svg" alt="Cloud" className="absolute top-[140px] left-[1312px] w-[320px] opacity-85 animate-retro-float pixelated select-none pointer-events-none" style={{ animationDelay: "2.3s" }} />
+          <img src="/pixel_cloud_small.svg" alt="Cloud" className="absolute top-[300px] left-[850px] w-[280px] opacity-85 animate-retro-float pixelated select-none pointer-events-none" style={{ animationDelay: "0s" }} />
+        <img src="/pixel_cloud_small.svg" alt="Cloud" className="absolute top-[140px] left-[-40px] w-[320px] opacity-80 animate-retro-float pixelated select-none pointer-events-none" style={{ animationDelay: "1s" }} />
+        <img src="/pixel_cloud_small.svg" alt="Cloud" className="absolute top-[39px] left-[1300px] w-[360px] opacity-90 animate-retro-float pixelated select-none pointer-events-none" style={{ animationDelay: "0.5s" }} />
+        <img src="/pixel_cloud_small.svg" alt="Cloud" className="absolute top-[333px] left-[2509px] w-[260px] opacity-75 animate-retro-float pixelated select-none pointer-events-none" style={{ animationDelay: "1.8s" }} />
+        <img src="/pixel_cloud_small.svg" alt="Cloud" className="absolute top-[140px] left-[1800px] w-[320px] opacity-85 animate-retro-float pixelated select-none pointer-events-none" style={{ animationDelay: "2.3s" }} />
           <img src="/pixel_cloud_small.svg" alt="Cloud" className="absolute top-[39px] left-[2519px] w-[360px] opacity-90 animate-retro-float pixelated select-none pointer-events-none" style={{ animationDelay: "0.2s" }} />
 
-          <img src="/pixel_cloud_large.svg" alt="Skyline" className="absolute top-[566px] left-[500px] w-[1437px] h-[458px] object-cover opacity-100 pointer-events-none select-none pixelated" />
+          <img src="/pixel_cloud_large.svg" alt="Skyline" className="absolute top-[566px] left-0 w-[1437px] h-[458px] object-cover opacity-100 pointer-events-none select-none pixelated" />
+          <img src="/pixel_cloud_large.svg" alt="Skyline" className="absolute top-[566px] left-[1435px] w-[1437px] h-[458px] object-cover opacity-100 pointer-events-none select-none pixelated" />
           
           {Array.from({ length: 12 }).map((_, idx) => (
             <img key={idx} src="/city_skyline.svg" alt="Skyline Block" className="absolute top-[631px] w-[246px] h-[249px] opacity-75 pointer-events-none select-none pixelated" style={{ left: `${idx * 245}px` }} />
           ))}
 
-          <img src="/bushes_pixel.svg" alt="Bushes" className="absolute top-[739px] left-[500px] w-[1456px] h-[200px] z-4 pointer-events-none select-none pixelated" />
+          {Array.from({ length: 3 }).map((_, idx) => (
+            <img
+              key={`bush-${idx}`}
+              src="/bushes_pixel.svg"
+              alt={`Bushes ${idx}`}
+              className="absolute top-[739px] w-[1456px] h-[200px] z-4 pointer-events-none select-none pixelated"
+              style={{ left: `${idx * 1409}px` }}
+            />
+          ))}
 
-          <RetroPipe left="1156px" top="-5px" height={400} isTop={true} />
-          <RetroPipe left="1656px" top="-5px" height={400} isTop={true} />
-          <RetroPipe left="1100px" top="650px" height={200} isTop={false} />
-          <RetroPipe left="1700px" top="600px" height={250} isTop={false} />
+          <RetroPipe left="1156px" top="-30px" height={430} isTop={true} />
+          <RetroPipe left="1656px" top="-30px" height={430} isTop={true} />
+          
+
+          {/* Angry Birds Elements */}
+          
+          {/* Scaled up Tower (Building) on the Right */}
+          <img 
+            src="/angry_bird_building.png?v=2" 
+            alt="Angry Bird Building" 
+            className="absolute top-[475px] left-[1900px] h-[450px] w-auto z-30 pointer-events-none select-none pixelated drop-shadow-md" 
+          />
+          
+          {/* Small Pipe on the Right to balance composition near slingshot (Removed as per request) */}
+
+          {/* Slingshot Composite on the Left */}
+          <div className="absolute top-[675px] left-[600px] w-[170px] h-[250px] z-30 pointer-events-none select-none drop-shadow-md">
+            {/* Base Slingshot */}
+            <img src="/angry_bird_catapult.png?v=2" className="absolute inset-0 w-full h-full pixelated" alt="Slingshot Base" />
+          </div>
 
           <div className="absolute top-[925px] left-0 w-full h-[300px] z-25 flex flex-col select-none pointer-events-none">
             <div className="w-full h-5 bg-[#52AE26] border-t-4 border-b-4 border-black flex flex-col justify-between shrink-0">
@@ -141,22 +173,33 @@ export default function LoginPage() {
               <div className="w-full h-[3px] bg-[#3FA70E]" />
             </div>
             <div className="w-full flex-grow bg-[#DD9955] border-b-4 border-black relative overflow-hidden flex items-start pt-3">
-              <div className="flex whitespace-nowrap animate-marquee">
-                <span className="inline-block text-[24px] text-[#CC7700] tracking-wider uppercase font-bold pr-10">
-                  {Array(6).fill("MICROSOFT INNOVATIONS CLUB TENURE 2026-2027").join("  ★  ")}
-                </span>
-                <span className="inline-block text-[24px] text-[#CC7700] tracking-wider uppercase font-bold pr-10">
-                  {Array(6).fill("MICROSOFT INNOVATIONS CLUB TENURE 2026-2027").join("  ★  ")}
-                </span>
-              </div>
+                <div className="flex whitespace-nowrap animate-marquee">
+                  <span className="inline-flex items-center shrink-0 text-[18px] md:text-[22px] text-[#CC7700] tracking-wider uppercase font-bold">
+                    {Array(6).fill("MICROSOFT INNOVATIONS CLUB TENURE 2026-2027").map((text, idx) => (
+                      <React.Fragment key={idx}>
+                        <span>{text}</span>
+                        <img src="/mic_logo_pixel.png" alt="MIC" className="w-8 h-8 md:w-10 md:h-10 mx-8 shrink-0" />
+                      </React.Fragment>
+                    ))}
+                  </span>
+                  <span className="inline-flex items-center shrink-0 text-[18px] md:text-[22px] text-[#CC7700] tracking-wider uppercase font-bold">
+                    {Array(6).fill("MICROSOFT INNOVATIONS CLUB TENURE 2026-2027").map((text, idx) => (
+                      <React.Fragment key={idx}>
+                        <span>{text}</span>
+                        <img src="/mic_logo_pixel.png" alt="MIC" className="w-8 h-8 md:w-10 md:h-10 mx-8 shrink-0" />
+                      </React.Fragment>
+                    ))}
+                  </span>
+                </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="absolute top-6 left-8 z-30 cursor-pointer" onClick={() => router.push("/")}>
-        <img src="/mic_logo_pixel.png" alt="MIC Logo" className="pixelated w-[110px] h-[79px] select-none hover:animate-retro-shake" />
-      </div>
+      <MicLogo />
+
+      {/* Back Button */}
+      <BackButton onClick={() => router.push("/")} />
 
       {/* Login Dialog Box */}
       <div className="relative z-40 w-full max-w-[650px] px-4 animate-pixel-slide-up">
@@ -173,10 +216,6 @@ export default function LoginPage() {
           </div>
 
           <div className="w-full p-6 md:p-8 flex flex-col items-center gap-6 bg-[#FFDED6] mt-2 border-4 border-black rounded-[6px]">
-            
-            <div className="w-16 h-16 bg-white border-4 border-black flex items-center justify-center p-1 shadow-[4px_4px_0px_#000] hover:animate-retro-shake">
-                <img src="/flappy_bird.svg" alt="Bird" className="pixelated object-contain w-full h-full animate-retro-float" />
-            </div>
 
             <div className="text-center space-y-4">
               <h2 className="text-[12px] font-bold text-[#A93710] leading-loose drop-shadow-[1px_1px_0px_#fff]">
@@ -212,6 +251,7 @@ export default function LoginPage() {
                 </>
               )}
             </button>
+
 
             {/* Cloudflare Turnstile — token verified server-side before sign-in */}
             <div className="w-full bg-white border-4 border-black flex items-center justify-center py-2" style={{ boxShadow: "inset 2px 2px 0px 0px rgba(0,0,0,0.1)" }}>

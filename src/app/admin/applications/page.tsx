@@ -93,7 +93,16 @@ export default function AdminApplicationsPage() {
   }, [page, search, deptFilter, statusFilter]);
 
   useEffect(() => {
-    load();
+    let active = true;
+    const init = async () => {
+      if (active) {
+        await load();
+      }
+    };
+    init();
+    return () => {
+      active = false;
+    };
   }, [load]);
 
   // Bulk selection functions

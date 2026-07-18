@@ -18,7 +18,7 @@ import { z } from "zod";
 function validateResponses(
   formFields: FormField[],
   responses: Record<string, unknown>
-): { data?: Record<string, any>; error?: string } {
+): { data?: Record<string, unknown>; error?: string } {
   const schemaShape: Record<string, z.ZodTypeAny> = {};
 
   for (const field of formFields) {

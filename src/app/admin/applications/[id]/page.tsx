@@ -50,6 +50,14 @@ interface Application {
   secondPrefProgress: PrefProgress;
   createdAt: string;
 }
+interface ClientDepartment {
+  slug: string;
+  name: string;
+  type: "tech" | "non-tech";
+  totalStages: number;
+  isActive: boolean;
+  maxCapacity: number;
+}
 
 const DEPT_NAMES: Record<string, string> = {
   development: "Development",
@@ -379,8 +387,8 @@ export default function ApplicantDetailPage({
   const { id } = use(params);
   const router = useRouter();
   const [application, setApplication] = useState<Application | null>(null);
-  const [dept1, setDept1] = useState<any>(null);
-  const [dept2, setDept2] = useState<any>(null);
+  const [dept1, setDept1] = useState<ClientDepartment | null>(null);
+  const [dept2, setDept2] = useState<ClientDepartment | null>(null);
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState(false);
   const [message, setMessage] = useState("");
@@ -411,7 +419,16 @@ export default function ApplicantDetailPage({
   };
 
   useEffect(() => {
-    load();
+    let active = true;
+    const init = async () => {
+      if (active) {
+        await load();
+      }
+    };
+    init();
+    return () => {
+      active = false;
+    };
   }, [id]);
 
   const handleActionConfirmTrigger = (
@@ -453,7 +470,7 @@ export default function ApplicantDetailPage({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-[100dvh] bg-black flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-10 w-10 text-teal-400 animate-spin" />
           <p className="text-sm text-zinc-400 font-medium">Loading details...</p>
@@ -464,7 +481,7 @@ export default function ApplicantDetailPage({
 
   if (!application) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-[100dvh] bg-black flex items-center justify-center">
         <Card className="max-w-xs text-center p-6 border-zinc-900 space-y-4 bg-zinc-950">
           <AlertTriangle className="h-12 w-12 text-amber-500 mx-auto" />
           <h2 className="text-lg font-bold text-white">Application Not Found</h2>

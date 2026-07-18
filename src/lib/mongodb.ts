@@ -22,7 +22,7 @@ declare global {
   var _mongoClientPromise: Promise<MongoClient> | undefined;
 }
 
-let cached = (global.mongoose || { conn: null, promise: null }) as MongooseCache;
+const cached = (global.mongoose || { conn: null, promise: null }) as MongooseCache;
 
 if (!global.mongoose) {
   global.mongoose = cached;
