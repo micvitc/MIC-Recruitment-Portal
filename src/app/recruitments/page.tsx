@@ -756,21 +756,36 @@ export default function RecruitmentsPage() {
           </div>
 
           {/* ================= TECH ROW ================= */}
-          {/* Tech signboard */}
+          {/* Tech signboard (arrow shaped) */}
           <div 
-            className="absolute bg-[#B87B21] text-black text-[22px] font-bold border-4 border-black z-20 flex items-center justify-center uppercase tracking-wider"
+            className="absolute z-20"
             style={{ 
               left: "64px", 
               top: "313px", 
-              width: "240px", 
+              width: "276px", 
               height: "80px",
-              boxShadow: "6px 6px 0px 0px #000"
+              filter: "drop-shadow(6px 6px 0px #000)"
             }}
           >
-            TECH
+            {/* Outer border shape */}
+            <div 
+              className="absolute inset-0 bg-black"
+              style={{
+                clipPath: "polygon(0 0, calc(100% - 24px) 0, 100% 50%, calc(100% - 24px) 100%, 0 100%)"
+              }}
+            />
+            {/* Inner background shape */}
+            <div 
+              className="absolute top-1 left-1 bottom-1 right-1 bg-[#B87B21] flex items-center justify-center pr-10"
+              style={{
+                clipPath: "polygon(0 0, calc(100% - 20px) 0, 100% 50%, calc(100% - 20px) 100%, 0 100%)"
+              }}
+            >
+              <span className="text-black text-[22px] font-bold tracking-wider">
+                Tech
+              </span>
+            </div>
           </div>
-
-          <NormalArrow top="338px" left="305px" width={44} height={28} />
 
           {/* Tech Cards (Centered perfectly between exact Figma pipes without overlaps) */}
           {techQuests.map((q, idx) => {
@@ -809,21 +824,36 @@ export default function RecruitmentsPage() {
           })}
 
           {/* ================= NON-TECH ROW ================= */}
-          {/* Non Tech signboard */}
+          {/* Non Tech signboard (arrow shaped) */}
           <div 
-            className="absolute bg-[#B87B21] text-black text-[22px] font-bold border-4 border-black z-20 flex items-center justify-center uppercase tracking-wider"
+            className="absolute z-20"
             style={{ 
               left: "64px", 
               top: "588px", 
-              width: "280px", 
+              width: "366px", 
               height: "80px",
-              boxShadow: "6px 6px 0px 0px #000"
+              filter: "drop-shadow(6px 6px 0px #000)"
             }}
           >
-            NON TECH
+            {/* Outer border shape */}
+            <div 
+              className="absolute inset-0 bg-black"
+              style={{
+                clipPath: "polygon(0 0, calc(100% - 24px) 0, 100% 50%, calc(100% - 24px) 100%, 0 100%)"
+              }}
+            />
+            {/* Inner background shape */}
+            <div 
+              className="absolute top-1 left-1 bottom-1 right-1 bg-[#B87B21] flex items-center justify-center pr-10"
+              style={{
+                clipPath: "polygon(0 0, calc(100% - 20px) 0, 100% 50%, calc(100% - 20px) 100%, 0 100%)"
+              }}
+            >
+              <span className="text-black text-[22px] font-bold tracking-wider">
+                Non Tech
+              </span>
+            </div>
           </div>
-
-          <NormalArrow top="613px" left="365px" width={64} height={32} />
 
           {/* Non-Tech Cards (Centered perfectly between exact Figma pipes without overlaps) */}
           {nonTechQuests.map((q, idx) => {
