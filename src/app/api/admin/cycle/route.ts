@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { dbConnect } from "@/lib/mongodb";
 import RecruitmentCycle from "@/models/RecruitmentCycle";
+import { cycleUpdateSchema } from "@/lib/validation";
 
 export const dynamic = "force-dynamic";
 
@@ -34,14 +35,14 @@ export async function PUT(req: NextRequest) {
 
   await dbConnect();
   const body = await req.json();
-  const { isOpen, startAt, endAt } = body;
-
-  if (typeof isOpen !== "boolean") {
+  const parseResult = cycleUpdateSchema.safeParse(body);
+  if (!parseResult.success) {
     return NextResponse.json(
-      { success: false, error: "isOpen must be boolean." },
+      { success: false, error: parseResult.error.issues[0]?.message || "Validation failed." },
       { status: 400 }
     );
   }
+  const { isOpen, startAt, endAt } = parseResult.data;
 
   const updateFields: any = { isOpen };
   if (startAt !== undefined) updateFields.startAt = startAt ? new Date(startAt) : null;

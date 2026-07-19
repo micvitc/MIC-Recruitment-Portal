@@ -5,7 +5,7 @@ import Application from "@/models/Application";
 import Department from "@/models/Department";
 import RecruitmentCycle from "@/models/RecruitmentCycle";
 import { sendApplicationReceipt } from "@/lib/mailer";
-import type { FormField } from "@/models/Department";
+import { validateResponses } from "@/lib/validation";
 
 const CYCLE_ID = "2026-27";
 
@@ -13,53 +13,6 @@ interface RouteParams {
   params: Promise<{ dept: string; n: string }>;
 }
 
-import { z } from "zod";
-
-function validateResponses(
-  formFields: FormField[],
-  responses: Record<string, unknown>
-): { data?: Record<string, unknown>; error?: string } {
-  const schemaShape: Record<string, z.ZodTypeAny> = {};
-
-  for (const field of formFields) {
-    let fieldSchema: z.ZodTypeAny;
-
-    if (field.type === "url") {
-      const urlStr = z.string().url(`"${field.label}" must be a valid URL.`).max(2000, `"${field.label}" URL is too long.`);
-      fieldSchema = z.union([urlStr, z.array(urlStr)]);
-    } else if (field.type === "checkbox") {
-      fieldSchema = z.union([z.string(), z.array(z.string())]);
-    } else {
-      fieldSchema = z.string().max(field.maxLength || 5000, `"${field.label}" exceeds the maximum length of ${field.maxLength || 5000} characters.`);
-    }
-
-    if (field.required) {
-      if (field.type === "checkbox" || field.type === "url") {
-        fieldSchema = z.union([
-          z.string().min(1, `"${field.label}" is required.`),
-          z.array(z.string().min(1, `"${field.label}" is required.`)).min(1, `"${field.label}" is required.`)
-        ]);
-      } else {
-        fieldSchema = z.string().min(1, `"${field.label}" is required.`).max(field.maxLength || 5000, `"${field.label}" exceeds maximum length.`);
-      }
-    } else {
-      // Optional fields can be undefined, null, or empty string
-      fieldSchema = z.union([fieldSchema, z.literal(""), z.null(), z.undefined()]).optional();
-    }
-
-    schemaShape[field.id] = fieldSchema;
-  }
-
-  // Default z.object() strips any keys not defined in schemaShape, preventing NoSQL injection/bloat
-  const schema = z.object(schemaShape);
-
-  const result = schema.safeParse(responses);
-  if (!result.success) {
-    const err = result.error as z.ZodError;
-    return { error: err.issues[0]?.message ?? "Validation failed." };
-  }
-  return { data: result.data };
-}
 
 // GET — fetch current user's status
 export async function GET(_req: NextRequest, { params }: RouteParams) {

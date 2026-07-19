@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { dbConnect } from "@/lib/mongodb";
 import InterviewSlot from "@/models/InterviewSlot";
+import { interviewSlotInputSchema } from "@/lib/validation";
 
 export async function GET(req: NextRequest) {
   // Auth guard
@@ -32,16 +33,20 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { slots } = body; // Array of slots, or a single slot object
+    const parseResult = interviewSlotInputSchema.safeParse(body);
+    if (!parseResult.success) {
+      return NextResponse.json({ success: false, error: parseResult.error.issues[0]?.message || "Validation failed." }, { status: 400 });
+    }
+    const validatedData = parseResult.data;
 
-    if (Array.isArray(slots)) {
+    if ("slots" in validatedData) {
       // Batch creation
       const createdSlots = await InterviewSlot.insertMany(
-        slots.map((slot) => ({
+        validatedData.slots.map((slot) => ({
           adminEmail: slot.adminEmail,
           deptSlug: slot.deptSlug,
-          startTime: new Date(slot.startTime),
-          endTime: new Date(slot.endTime),
+          startTime: slot.startTime,
+          endTime: slot.endTime,
           locationType: slot.locationType,
           locationDetails: slot.locationDetails,
           meetingLink: slot.locationType === "online" ? slot.meetingLink : undefined,
@@ -50,17 +55,13 @@ export async function POST(req: NextRequest) {
       );
       return NextResponse.json({ success: true, count: createdSlots.length });
     } else {
-      const { adminEmail, deptSlug, startTime, endTime, locationType, locationDetails, meetingLink } = body;
-
-      if (!adminEmail || !deptSlug || !startTime || !endTime || !locationType || !locationDetails) {
-        return NextResponse.json({ success: false, error: "Missing required fields." }, { status: 400 });
-      }
+      const { adminEmail, deptSlug, startTime, endTime, locationType, locationDetails, meetingLink } = validatedData;
 
       const slot = await InterviewSlot.create({
         adminEmail,
         deptSlug,
-        startTime: new Date(startTime),
-        endTime: new Date(endTime),
+        startTime,
+        endTime,
         locationType,
         locationDetails,
         meetingLink: locationType === "online" ? meetingLink : undefined,

@@ -8,6 +8,7 @@ import type { FormField, StageConfig } from "@/models/Department";
 import TurnstileWidget from "@/components/TurnstileWidget";
 import posthog from "posthog-js";
 import BackButton from "@/components/BackButton";
+import { validateResponses } from "@/lib/validation";
 
 const pressStart = Press_Start_2P({
   weight: "400",
@@ -435,6 +436,15 @@ export default function StagePage({
     e.preventDefault();
     setError("");
     setCaptchaError(false);
+
+    // Client-side Zod validation — phone, GitHub, LinkedIn, email, required fields
+    if (stageConfig) {
+      const validation = validateResponses(stageConfig.formFields, responses);
+      if (validation.error) {
+        setError(validation.error);
+        return;
+      }
+    }
 
     // Require a valid Turnstile token before submitting
     if (!turnstileToken) {

@@ -5,6 +5,7 @@ import Application from "@/models/Application";
 import Department from "@/models/Department";
 import RecruitmentCycle from "@/models/RecruitmentCycle";
 import type { DeptSlug, PrefType } from "@/models/Application";
+import { applyInitSchema } from "@/lib/validation";
 
 const CYCLE_ID = "2026-27";
 
@@ -52,18 +53,18 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { firstPreference, _trap } = body;
+    const parseResult = applyInitSchema.safeParse(body);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: parseResult.error.issues[0]?.message || "Validation failed." },
+        { status: 400 }
+      );
+    }
+    const { firstPreference, _trap } = parseResult.data;
 
     // Honeypot check
     if (_trap) {
       return NextResponse.json({ success: false, error: "Bad request." }, { status: 400 });
-    }
-
-    if (!firstPreference) {
-      return NextResponse.json(
-        { success: false, error: "First preference is required." },
-        { status: 400 }
-      );
     }
 
     const firstPrefType = DEPT_TYPE_MAP[firstPreference as DeptSlug];

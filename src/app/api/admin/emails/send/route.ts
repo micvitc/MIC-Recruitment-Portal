@@ -4,6 +4,7 @@ import { dbConnect } from "@/lib/mongodb";
 import Application from "@/models/Application";
 import EmailLog from "@/models/EmailLog";
 import nodemailer from "nodemailer";
+import { emailBlastSchema } from "@/lib/validation";
 
 const DEPT_NAMES: Record<string, string> = {
   development: "Development",
@@ -101,14 +102,14 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { recipientType, testEmail, filters, subject, body: emailBody, templateType = "custom" } = body;
-
-    if (!subject || !emailBody) {
+    const parseResult = emailBlastSchema.safeParse(body);
+    if (!parseResult.success) {
       return NextResponse.json(
-        { success: false, error: "Subject and Body are required." },
+        { success: false, error: parseResult.error.issues[0]?.message || "Validation failed." },
         { status: 400 }
       );
     }
+    const { recipientType, testEmail, filters, subject, body: emailBody, templateType } = parseResult.data;
 
     const transporter = nodemailer.createTransport({
       service: "gmail",
