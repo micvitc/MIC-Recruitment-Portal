@@ -144,3 +144,68 @@ export function validateResponses(
   }
   return { data: result.data };
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Admin and Recruitment Validation Schemas
+// ─────────────────────────────────────────────────────────────────────────
+
+export const emailBlastSchema = z.object({
+  recipientType: z.enum(["test", "cohort"]),
+  testEmail: z.string().email("Invalid test email address.").optional().nullable(),
+  filters: z.object({
+    status: z.string().optional(),
+    department: z.string().optional(),
+    stage: z.coerce.number().optional(),
+    preference: z.enum(["first", "second", "active"]).optional(),
+  }).optional().nullable(),
+  subject: z.string().min(1, "Subject is required.").max(200, "Subject is too long."),
+  body: z.string().min(1, "Body is required.").max(10000, "Body is too long."),
+  templateType: z.string().optional().default("custom"),
+});
+
+const singleSlotSchema = z.object({
+  adminEmail: z.string().email("Invalid admin email address."),
+  deptSlug: z.string().min(1, "Department slug is required."),
+  startTime: z.coerce.date(),
+  endTime: z.coerce.date(),
+  locationType: z.enum(["online", "offline"]),
+  locationDetails: z.string().min(1, "Location details are required."),
+  meetingLink: z.string().url("Invalid meeting link.").optional().nullable(),
+}).refine(data => data.endTime > data.startTime, {
+  message: "End time must be after start time.",
+  path: ["endTime"],
+}).refine(data => data.locationType !== "online" || !!data.meetingLink, {
+  message: "Meeting link is required for online interviews.",
+  path: ["meetingLink"],
+});
+
+export const interviewSlotInputSchema = z.union([
+  z.object({
+    slots: z.array(singleSlotSchema).min(1, "At least one slot must be provided."),
+  }),
+  singleSlotSchema,
+]);
+
+export const applyInitSchema = z.object({
+  firstPreference: z.enum([
+    "development",
+    "competitive-coding",
+    "ui-ux",
+    "ai-ml",
+    "cyber-security",
+    "design",
+    "management",
+    "entrepreneurship",
+    "content-media"
+  ], {
+    message: "Invalid department selection."
+  }),
+  _trap: z.string().optional().nullable(),
+});
+
+export const cycleUpdateSchema = z.object({
+  isOpen: z.boolean({ message: "isOpen must be a boolean value." }),
+  startAt: z.string().datetime({ message: "Invalid startAt date format." }).optional().nullable(),
+  endAt: z.string().datetime({ message: "Invalid endAt date format." }).optional().nullable(),
+});
+
