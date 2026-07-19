@@ -15,6 +15,7 @@ import {
   Video,
   MapPin,
 } from "lucide-react";
+import RetroLoader from "@/components/RetroLoader";
 
 interface StageSubmission {
   stage: number;
@@ -209,7 +210,8 @@ function StageTimeline({
 export default function ApplicationStatusPage() {
   const router = useRouter();
   const [application, setApplication] = useState<Application | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [dataLoaded, setDataLoaded] = useState(false);
+  const [showLoader, setShowLoader] = useState(true);
   const [cycleOpen, setCycleOpen] = useState(true);
   const [totalStages] = useState(2); // from DB ideally, hardcoded as 2 for now
 
@@ -279,19 +281,15 @@ export default function ApplicationStatusPage() {
       } catch {
         // ignore
       } finally {
-        setLoading(false);
+        setDataLoaded(true);
       }
     };
     load();
     loadBookingInfo();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="min-h-[100dvh] bg-slate-950 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 text-teal-400 animate-spin" />
-      </div>
-    );
+  if (showLoader) {
+    return <RetroLoader isLoading={!dataLoaded} onComplete={() => setShowLoader(false)} title="LOADING STATUS..." />;
   }
 
   if (!application) {
