@@ -154,7 +154,7 @@ function isApiAdminRoute(pathname: string) {
 // ---------------------------------------------------------------------------
 // Main middleware — NextAuth v5 pattern
 // ---------------------------------------------------------------------------
-export default auth(async (req: NextAuthRequest) => {
+export const proxy = auth(async (req: NextAuthRequest) => {
   const { pathname } = req.nextUrl;
   const method = req.method ?? "GET";
   const session = req.auth;
