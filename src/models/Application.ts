@@ -20,6 +20,13 @@ export type OverallStatus =
   | "waitlisted";
 export type PrefStatus = "active" | "passed" | "rejected" | "pending";
 
+export interface IPanelistScore {
+  interviewerEmail: string;
+  scores: Record<string, number>;
+  note?: string;
+  createdAt: Date;
+}
+
 export interface StageSubmission {
   stage: number;
   submittedAt: Date;
@@ -29,6 +36,7 @@ export interface StageSubmission {
   reviewedBy?: string;
   reviewedAt?: Date;
   result: StageResult;
+  panelistScores?: IPanelistScore[];
 }
 
 export interface PrefProgress {
@@ -47,6 +55,13 @@ export interface IApplication extends Document {
   secondPreference?: DeptSlug;
   secondPrefType?: PrefType;
 
+  fullName: string;
+  phone: string;
+  regNo: string;
+  year: string;
+  branch: string;
+  whyMic: string;
+
   activePreference: "first" | "second";
   overallStatus: OverallStatus;
 
@@ -63,6 +78,14 @@ const StageSubmissionSchema = new Schema<StageSubmission>(
     submittedAt: { type: Date, required: true },
     responses: { type: Schema.Types.Mixed, default: {} },
     scores: { type: Map, of: Number },
+    panelistScores: [
+      {
+        interviewerEmail: { type: String, required: true },
+        scores: { type: Map, of: Number },
+        note: { type: String },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
     adminNote: { type: String },
     reviewedBy: { type: String },
     reviewedAt: { type: Date },
@@ -123,6 +146,13 @@ const ApplicationSchema = new Schema<IApplication>(
       enum: ["tech", "non-tech"],
       required: false,
     },
+
+    fullName: { type: String, required: true },
+    phone: { type: String, required: true },
+    regNo: { type: String, required: true },
+    year: { type: String, required: true },
+    branch: { type: String, required: true },
+    whyMic: { type: String, required: true },
 
     activePreference: {
       type: String,

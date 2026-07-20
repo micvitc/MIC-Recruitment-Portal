@@ -11,6 +11,7 @@ export interface DepartmentData {
   description: string;
   skills: string;
   desc?: string;
+  stage1Open?: boolean;
 }
 
 // Map from role name (used in existing data) to new dept slug
@@ -225,17 +226,25 @@ export default function DepartmentPopup({
             <div className="w-full h-[3px] sm:h-1 bg-black mb-3 sm:mb-4" />
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
               <p className="text-[9px] sm:text-[10px] text-black font-bold uppercase tracking-wide text-center sm:text-left">
-                WANNA JOIN US IN COMPLETING THIS QUEST?
+                {department.stage1Open === false 
+                  ? "REGISTRATION IS CLOSED FOR THIS QUEST" 
+                  : "WANNA JOIN US IN COMPLETING THIS QUEST?"}
               </p>
               <button
+                disabled={department.stage1Open === false}
                 onClick={() => {
+                  if (department.stage1Open === false) return;
                   const slug = ROLE_TO_SLUG[department.role] ?? department.role.toLowerCase().replace(/\s+/g, "-");
                   onApply(slug);
                 }}
-                className="w-full sm:w-auto bg-[#E29A2B] hover:bg-[#F0AD3D] active:scale-95 border-2 sm:border-4 border-black py-2.5 px-4 sm:py-3 sm:px-6 text-[9px] sm:text-[10px] font-bold text-black uppercase tracking-wider cursor-pointer whitespace-nowrap transition-all"
+                className={`w-full sm:w-auto border-2 sm:border-4 border-black py-2.5 px-4 sm:py-3 sm:px-6 text-[9px] sm:text-[10px] font-bold text-black uppercase tracking-wider whitespace-nowrap transition-all ${
+                  department.stage1Open === false 
+                    ? "bg-gray-400 cursor-not-allowed opacity-75"
+                    : "bg-[#E29A2B] hover:bg-[#F0AD3D] active:scale-95 cursor-pointer"
+                }`}
                 style={{ boxShadow: "3px 3px 0px 0px #000" }}
               >
-                APPLY FOR THE QUEST
+                {department.stage1Open === false ? "QUEST CLOSED" : "APPLY FOR THE QUEST"}
               </button>
             </div>
           </div>

@@ -5,6 +5,7 @@ import Application from "@/models/Application";
 import Department from "@/models/Department";
 import RecruitmentCycle from "@/models/RecruitmentCycle";
 import type { DeptSlug, PrefType } from "@/models/Application";
+import { applyInitSchema } from "@/lib/validation";
 
 const CYCLE_ID = "2026-27";
 
@@ -31,12 +32,7 @@ export async function POST(req: NextRequest) {
 
     // Check recruitment is open
     const cycle = await RecruitmentCycle.findOne({ cycleId: CYCLE_ID });
-    if (!cycle?.isOpen) {
-      return NextResponse.json(
-        { success: false, error: "Recruitment is currently closed." },
-        { status: 403 }
-      );
-    }
+
 
     // Check existing application
     const existing = await Application.findOne({
@@ -51,18 +47,18 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { firstPreference, _trap } = body;
+    const parseResult = applyInitSchema.safeParse(body);
+    if (!parseResult.success) {
+      return NextResponse.json(
+        { success: false, error: parseResult.error.issues[0]?.message || "Validation failed." },
+        { status: 400 }
+      );
+    }
+    const { firstPreference, fullName, phone, regNo, year, branch, whyMic, _trap } = parseResult.data;
 
     // Honeypot check
     if (_trap) {
       return NextResponse.json({ success: false, error: "Bad request." }, { status: 400 });
-    }
-
-    if (!firstPreference) {
-      return NextResponse.json(
-        { success: false, error: "First preference is required." },
-        { status: 400 }
-      );
     }
 
     const firstPrefType = DEPT_TYPE_MAP[firstPreference as DeptSlug];
@@ -84,12 +80,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const { isStageOpen } = await import("@/lib/cycle");
+    if (!isStageOpen(cycle, dept1, 1)) {
+      return NextResponse.json(
+        { success: false, error: "Stage 1 (Registration) is currently closed for this department." },
+        { status: 403 }
+      );
+    }
+
     const application = await Application.create({
       userId: session.user.id,
       userEmail: session.user.email,
       cycleId: CYCLE_ID,
       firstPreference,
       firstPrefType,
+      fullName,
+      phone,
+      regNo,
+      year,
+      branch,
+      whyMic,
       activePreference: "first",
       overallStatus: "in-progress",
       firstPrefProgress: { currentStage: 1, status: "active", stages: [] },

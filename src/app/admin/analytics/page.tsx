@@ -59,7 +59,6 @@ interface Stats {
     _id: string;
     slug: string;
     name: string;
-    maxCapacity: number;
     isActive: boolean;
   }>;
   acceptedByDept: Array<{ _id: string; count: number }>;
@@ -68,16 +67,11 @@ interface Stats {
 interface DeptStats {
   slug: string;
   name: string;
-  maxCapacity: number;
   totalStages: number;
   firstPrefCount: number;
   secondPrefCount: number;
   acceptedCount: number;
-  avgScores: {
-    technical: number;
-    communication: number;
-    creativity: number;
-  };
+  avgScores: Record<string, number>;
   stagesFunnel: Array<{ stageNum: number; count: number }>;
   yearDistribution: Array<{ year: string; count: number }>;
 }
@@ -163,7 +157,7 @@ export default function AdvancedAnalyticsPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-[100dvh] bg-black flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-10 w-10 text-teal-400 animate-spin" />
           <p className="text-sm text-zinc-400 font-medium">Loading advanced analytics...</p>
@@ -211,14 +205,11 @@ export default function AdvancedAnalyticsPage() {
     count: stage.count,
   }));
 
-  // Capacity fill tracking per department
   const capacityList = (stats?.departmentsList ?? []).map((dept) => {
     const acceptedCount = stats?.acceptedByDept.find((a) => a._id === dept.slug)?.count ?? 0;
-    const fillPercent = dept.maxCapacity > 0 ? Math.min(100, Math.round((acceptedCount / dept.maxCapacity) * 100)) : 0;
     return {
       ...dept,
       acceptedCount,
-      fillPercent,
     };
   });
 
@@ -377,7 +368,7 @@ export default function AdvancedAnalyticsPage() {
           <CardHeader className="border-b border-zinc-900 bg-zinc-900/10">
             <CardTitle className="text-base font-bold flex items-center gap-2">
               <Award className="h-5 w-5 text-teal-400" />
-              Department Placement & Capacity Fill
+              Department Placement Status
             </CardTitle>
             <CardDescription>
               Real-time monitoring. Click on any department card to view advanced metrics.
@@ -404,25 +395,12 @@ export default function AdvancedAnalyticsPage() {
                     </Badge>
                   </div>
 
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5 border-t border-zinc-900/60 pt-3">
                     <div className="flex items-center justify-between text-[10px] uppercase font-bold text-zinc-500">
-                      <span>Admission Capacity</span>
-                      <span className="text-zinc-300">
-                        {dept.acceptedCount} / {dept.maxCapacity}
+                      <span>Total Selected</span>
+                      <span className="text-teal-400 text-xs font-black">
+                        {dept.acceptedCount}
                       </span>
-                    </div>
-                    {/* Custom progress bar */}
-                    <div className="h-2 w-full bg-black rounded-full overflow-hidden border border-zinc-900/40">
-                      <div
-                        style={{ width: `${dept.fillPercent}%` }}
-                        className={`h-full rounded-full transition-all duration-500 ${
-                          dept.fillPercent >= 90
-                            ? "bg-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.4)]"
-                            : dept.fillPercent >= 70
-                            ? "bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.4)]"
-                            : "bg-teal-500 shadow-[0_0_10px_rgba(45,212,191,0.4)]"
-                        }`}
-                      />
                     </div>
                   </div>
 
@@ -475,25 +453,13 @@ export default function AdvancedAnalyticsPage() {
                 </div>
               </div>
 
-              {/* Admission Capacity Fill info */}
+              {/* Admission Status */}
               <div className="p-4 rounded-xl border border-zinc-900 bg-zinc-950/60 space-y-3.5 text-left">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-white">Admission Fill Status</span>
+                  <span className="text-xs font-bold text-white">Admission Status</span>
                   <span className="text-xs font-black text-teal-400">
-                    {deptStats.acceptedCount} / {deptStats.maxCapacity} Selected
+                    {deptStats.acceptedCount} Selected
                   </span>
-                </div>
-                <div className="h-2 w-full bg-black rounded-full overflow-hidden border border-zinc-900">
-                  <div
-                    style={{
-                      width: `${
-                        deptStats.maxCapacity > 0
-                          ? Math.min(100, Math.round((deptStats.acceptedCount / deptStats.maxCapacity) * 100))
-                          : 0
-                      }%`,
-                    }}
-                    className="h-full bg-teal-500 rounded-full"
-                  />
                 </div>
               </div>
 
@@ -503,24 +469,26 @@ export default function AdvancedAnalyticsPage() {
                   <Award className="h-4 w-4 text-teal-400" /> Average Evaluation Scores
                 </h3>
                 <div className="p-4 rounded-xl border border-zinc-900 bg-zinc-950/60 space-y-4">
-                  {[
-                    { label: "Technical Ability", value: deptStats.avgScores.technical, color: "bg-teal-500" },
-                    { label: "Communication Skills", value: deptStats.avgScores.communication, color: "bg-violet-500" },
-                    { label: "Creativity & Devotion", value: deptStats.avgScores.creativity, color: "bg-amber-500" },
-                  ].map((metric) => (
-                    <div key={metric.label} className="space-y-1.5">
-                      <div className="flex items-center justify-between text-xs font-semibold text-zinc-300">
-                        <span>{metric.label}</span>
-                        <span className="text-white font-extrabold">{metric.value} / 5</span>
+                  {!deptStats.avgScores || Object.keys(deptStats.avgScores).length === 0 ? (
+                    <p className="text-xs text-zinc-600 font-medium text-center py-4 font-mono">
+                      No scorecard metrics evaluated yet.
+                    </p>
+                  ) : (
+                    Object.entries(deptStats.avgScores).map(([metric, value]) => (
+                      <div key={metric} className="space-y-1.5 font-mono">
+                        <div className="flex items-center justify-between text-xs font-semibold text-zinc-300">
+                          <span className="capitalize">{metric}</span>
+                          <span className="text-white font-extrabold">{value} / 5</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-black rounded-full overflow-hidden">
+                          <div
+                            style={{ width: `${(value / 5) * 100}%` }}
+                            className="h-full rounded-full bg-teal-500"
+                          />
+                        </div>
                       </div>
-                      <div className="h-1.5 w-full bg-black rounded-full overflow-hidden">
-                        <div
-                          style={{ width: `${(metric.value / 5) * 100}%` }}
-                          className={`h-full rounded-full ${metric.color}`}
-                        />
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
 

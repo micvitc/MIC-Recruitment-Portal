@@ -11,7 +11,12 @@ import {
   Star,
   AlertTriangle,
   Award,
+  Calendar,
+  Video,
+  MapPin,
 } from "lucide-react";
+import RetroLoader from "@/components/RetroLoader";
+import StageProgressHeader from "@/components/StageProgressHeader";
 
 interface StageSubmission {
   stage: number;
@@ -37,8 +42,31 @@ interface Application {
   overallStatus: "in-progress" | "selected" | "rejected" | "waitlisted";
   firstPrefProgress: PrefProgress;
   secondPrefProgress: PrefProgress;
+  fullName: string;
+  phone: string;
+  regNo: string;
+  year: string;
+  branch: string;
+  whyMic: string;
   createdAt: string;
   updatedAt: string;
+}
+
+interface InterviewSlot {
+  _id: string;
+  adminEmail: string;
+  deptSlug: string;
+  startTime: string;
+  endTime: string;
+  status: string;
+  locationType: "offline" | "online";
+  locationDetails: string;
+  bookedBy?: {
+    userId: string;
+    userEmail: string;
+    userName?: string;
+  };
+  meetingLink?: string;
 }
 
 const DEPT_NAMES: Record<string, string> = {
@@ -115,8 +143,8 @@ function StageTimeline({
 
       {/* Stage dots */}
       <div className="space-y-3">
-        {Array.from({ length: Math.max(1, totalStages - 1) }).map((_, i) => {
-          const stageNum = i + 2; // actual stage number in DB
+        {Array.from({ length: Math.max(1, totalStages) }).map((_, i) => {
+          const stageNum = i + 1; // actual stage number in DB (1 = Domain, 2 = Task)
           const displayStageNum = i + 1; // stage number displayed to user
           const submission = progress.stages.find((s) => s.stage === stageNum);
           const isCurrentStage = stageNum === progress.currentStage && progress.status === "active";
@@ -180,7 +208,7 @@ function StageTimeline({
           onClick={onContinue}
           className={`w-full py-3 rounded-xl bg-${color}-500/10 border border-${color}-500/30 text-${color}-400 font-bold text-sm flex items-center justify-center gap-2 hover:bg-${color}-500/20 transition-all`}
         >
-          {progress.currentStage === 1 ? "Fill Personal Information" : `Continue Stage ${progress.currentStage - 1}`} <ChevronRight className="h-4 w-4" />
+          {`Continue Stage ${progress.currentStage}`} <ChevronRight className="h-4 w-4" />
         </button>
       )}
     </div>
@@ -189,9 +217,64 @@ function StageTimeline({
 export default function ApplicationStatusPage() {
   const router = useRouter();
   const [application, setApplication] = useState<Application | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [dataLoaded, setDataLoaded] = useState(false);
+  const [showLoader, setShowLoader] = useState(true);
   const [cycleOpen, setCycleOpen] = useState(true);
-  const [totalStages] = useState(2); // from DB ideally, hardcoded as 2 for now
+  const [totalStages] = useState(2); // Domain and Task
+
+  // Booking states
+  const [bookingData, setBookingData] = useState<{
+    slots: InterviewSlot[];
+    currentBooking: InterviewSlot | null;
+    deptSlug: string;
+  } | null>(null);
+  const [bookingLoading, setBookingLoading] = useState(true);
+  const [bookingSubmitting, setBookingSubmitting] = useState(false);
+  const [selectedSlotId, setSelectedSlotId] = useState("");
+  const [showReschedule, setShowReschedule] = useState(false);
+
+  const loadBookingInfo = async () => {
+    try {
+      const res = await fetch("/api/apply/interviews");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setBookingData({
+            slots: data.slots,
+            currentBooking: data.currentBooking,
+            deptSlug: data.deptSlug,
+          });
+        }
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setBookingLoading(false);
+    }
+  };
+
+  const handleBookSlot = async (slotId: string) => {
+    if (!slotId) return;
+    setBookingSubmitting(true);
+    try {
+      const res = await fetch("/api/apply/interviews", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slotId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        await loadBookingInfo();
+        setShowReschedule(false);
+      } else {
+        alert(data.error || "Failed to book slot.");
+      }
+    } catch {
+      alert("Failed to connect to server.");
+    } finally {
+      setBookingSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -205,23 +288,20 @@ export default function ApplicationStatusPage() {
       } catch {
         // ignore
       } finally {
-        setLoading(false);
+        setDataLoaded(true);
       }
     };
     load();
+    loadBookingInfo();
   }, []);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-        <Loader2 className="h-8 w-8 text-teal-400 animate-spin" />
-      </div>
-    );
+  if (showLoader) {
+    return <RetroLoader isLoading={!dataLoaded} onComplete={() => setShowLoader(false)} title="LOADING STATUS..." />;
   }
 
   if (!application) {
     return (
-      <main className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
+      <main className="min-h-[100dvh] bg-slate-950 flex items-center justify-center p-6">
         <div className="max-w-sm w-full text-center space-y-6">
           <AlertTriangle className="h-12 w-12 text-amber-400 mx-auto" />
           <h1 className="text-xl font-bold text-white">No Application Found</h1>
@@ -237,8 +317,11 @@ export default function ApplicationStatusPage() {
     );
   }
 
+  const activePref = application.activePreference === "first" ? application.firstPreference : application.secondPreference;
+  const activeProgress = application.activePreference === "first" ? application.firstPrefProgress : application.secondPrefProgress;
+
   return (
-    <main className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black p-4 md:p-8">
+    <main className="min-h-[100dvh] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-black p-4 md:p-8">
       <div className="fixed top-0 right-1/3 -z-10 h-96 w-96 rounded-full bg-teal-500/6 blur-[120px]" />
 
       <div className="max-w-2xl mx-auto space-y-6">
@@ -281,12 +364,23 @@ export default function ApplicationStatusPage() {
           <StatusBadge status={application.overallStatus} />
         </div>
 
+        {/* Stage Progress Circles */}
+        {activeProgress && (
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/40 backdrop-blur-md p-6 flex flex-col items-center">
+            <p className="text-[10px] text-slate-505 uppercase tracking-widest font-bold self-start mb-4">
+              Current Quest Progress ({DEPT_NAMES[activePref] || activePref})
+            </p>
+            <StageProgressHeader
+              currentStage={activeProgress.currentStage}
+              stages={activeProgress.stages}
+              status={activeProgress.status}
+            />
+          </div>
+        )}
+
         {/* Personal Info Card */}
         {(() => {
-          const personalInfoStage =
-            application.firstPrefProgress.stages.find((s) => s.stage === 1) ||
-            application.secondPrefProgress?.stages.find((s) => s.stage === 1);
-          if (!personalInfoStage) return null;
+          if (!application.fullName) return null;
 
           return (
             <div className="rounded-2xl border border-slate-800 bg-slate-900/40 backdrop-blur-md p-6 space-y-4">
@@ -296,29 +390,29 @@ export default function ApplicationStatusPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Full Name</p>
-                  <p className="text-sm font-semibold text-slate-200 mt-1">{String(personalInfoStage.responses.fullName || "—")}</p>
+                  <p className="text-sm font-semibold text-slate-200 mt-1">{application.fullName || "—"}</p>
                 </div>
                 <div>
                   <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Phone Number</p>
-                  <p className="text-sm font-semibold text-slate-200 mt-1">{String(personalInfoStage.responses.phone || "—")}</p>
+                  <p className="text-sm font-semibold text-slate-200 mt-1">{application.phone || "—"}</p>
                 </div>
                 <div>
                   <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Registration Number</p>
-                  <p className="text-sm font-semibold text-slate-200 mt-1">{String(personalInfoStage.responses.regNo || "—")}</p>
+                  <p className="text-sm font-semibold text-slate-200 mt-1">{application.regNo || "—"}</p>
                 </div>
                 <div>
                   <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Year of Study</p>
-                  <p className="text-sm font-semibold text-slate-200 mt-1">{String(personalInfoStage.responses.year || "—")}</p>
+                  <p className="text-sm font-semibold text-slate-200 mt-1">{application.year || "—"}</p>
                 </div>
                 <div className="sm:col-span-2">
                   <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Branch / Programme</p>
-                  <p className="text-sm font-semibold text-slate-200 mt-1">{String(personalInfoStage.responses.branch || "—")}</p>
+                  <p className="text-sm font-semibold text-slate-200 mt-1">{application.branch || "—"}</p>
                 </div>
-                {personalInfoStage.responses.whyMic ? (
+                {application.whyMic ? (
                   <div className="sm:col-span-2">
                     <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Why do you want to join MIC?</p>
                     <p className="text-sm text-slate-300 mt-1 leading-relaxed bg-slate-950/45 p-3 rounded-lg border border-slate-800/40">
-                      {String(personalInfoStage.responses.whyMic)}
+                      {application.whyMic}
                     </p>
                   </div>
                 ) : null}
@@ -326,6 +420,177 @@ export default function ApplicationStatusPage() {
             </div>
           );
         })()}
+
+        {/* Interview Booking Card */}
+        {!bookingLoading && bookingData && activeProgress && activeProgress.currentStage === 3 && activeProgress.status === "active" && (bookingData.currentBooking || bookingData.slots.length > 0) && (
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/40 backdrop-blur-md p-6 space-y-4">
+            <h3 className="text-base font-bold text-white border-b border-slate-800 pb-2 flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-teal-400" />
+              Interview Scheduling
+            </h3>
+            
+            {bookingData.currentBooking ? (
+              <div className="space-y-4">
+                <div className="p-4 rounded-xl bg-teal-500/5 border border-teal-500/20 space-y-3">
+                  <div className="flex items-center gap-2 text-teal-400 font-bold text-sm">
+                    <CheckCircle2 className="h-5 w-5" />
+                    <span>Interview Scheduled</span>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-mono pt-1 text-slate-350">
+                    <div className="space-y-1">
+                      <p className="text-slate-500 font-bold uppercase tracking-wider text-[9px]">Date & Time</p>
+                      <p className="text-white text-sm font-bold">
+                        {new Date(bookingData.currentBooking.startTime).toLocaleString("en-IN", {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-slate-500 font-bold uppercase tracking-wider text-[9px]">Interviewer</p>
+                      <p className="text-white text-sm font-bold">{bookingData.currentBooking.adminEmail}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-slate-500 font-bold uppercase tracking-wider text-[9px]">Format</p>
+                      <p className="text-white text-sm font-bold flex items-center gap-1">
+                        {bookingData.currentBooking.locationType === "online" ? (
+                          <><Video className="h-3.5 w-3.5 text-sky-400" /> Online (Google Meet)</>
+                        ) : (
+                          <><MapPin className="h-3.5 w-3.5 text-emerald-400" /> Offline (In-Person)</>
+                        )}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-slate-500 font-bold uppercase tracking-wider text-[9px]">
+                        {bookingData.currentBooking.locationType === "online" ? "Google Meet Link" : "Location Details"}
+                      </p>
+                      {bookingData.currentBooking.locationType === "online" ? (
+                        <a
+                          href={bookingData.currentBooking.meetingLink}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-teal-400 font-bold hover:underline"
+                        >
+                          Join Meet Room
+                        </a>
+                      ) : (
+                        <p className="text-white text-sm font-bold">{bookingData.currentBooking.locationDetails}</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {!showReschedule ? (
+                  <button
+                    onClick={() => setShowReschedule(true)}
+                    className="text-xs text-teal-400 hover:text-teal-300 font-bold flex items-center gap-1.5 cursor-pointer underline bg-transparent border-none outline-none"
+                  >
+                    Need to reschedule? View other slots
+                  </button>
+                ) : (
+                  <div className="space-y-3 pt-2">
+                    <p className="text-xs text-slate-400 font-bold">Select a new slot to reschedule:</p>
+                    {bookingData.slots.length === 0 ? (
+                      <p className="text-xs text-slate-600 font-medium">No other slots are currently available.</p>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                        {bookingData.slots.map((slot) => (
+                          <button
+                            key={slot._id}
+                            disabled={bookingSubmitting}
+                            onClick={() => handleBookSlot(slot._id)}
+                            className="p-3 text-left rounded-xl border border-slate-800 bg-slate-950/60 hover:bg-slate-900/40 text-xs transition-all flex justify-between items-center cursor-pointer disabled:opacity-50 w-full"
+                          >
+                            <span className="text-white font-mono font-bold">
+                              {new Date(slot.startTime).toLocaleString("en-IN", {
+                                month: "short",
+                                day: "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </span>
+                            <span className="text-[10px] text-slate-500 font-bold uppercase">
+                              {slot.locationType}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    <button
+                      onClick={() => setShowReschedule(false)}
+                      className="text-xs text-slate-500 hover:text-slate-400 font-bold cursor-pointer bg-transparent border-none"
+                    >
+                      Cancel Reschedule
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/20 space-y-2">
+                  <div className="flex items-center gap-2 text-amber-400 font-bold text-sm">
+                    <Clock className="h-5 w-5 animate-pulse" />
+                    <span>Action Required: Schedule Your Interview</span>
+                  </div>
+                  <p className="text-xs text-slate-400 leading-relaxed">
+                    Please select an interview slot below for your active department preference (<strong>{DEPT_NAMES[bookingData.deptSlug] || bookingData.deptSlug}</strong>).
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-56 overflow-y-auto pr-1">
+                  {bookingData.slots.map((slot) => {
+                    const isSelected = selectedSlotId === slot._id;
+                    return (
+                      <div
+                        key={slot._id}
+                        onClick={() => setSelectedSlotId(slot._id)}
+                        className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col justify-between gap-1.5 ${
+                          isSelected
+                            ? "bg-teal-500/10 border-teal-500"
+                            : "bg-slate-950/60 border-slate-800 hover:bg-slate-900/40"
+                        }`}
+                      >
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-white font-mono font-bold">
+                            {new Date(slot.startTime).toLocaleString("en-IN", {
+                              month: "short",
+                              day: "2-digit",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-lg border ${
+                            slot.locationType === "online"
+                              ? "bg-sky-500/10 text-sky-400 border-sky-500/20"
+                              : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                          }`}>
+                            {slot.locationType}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-slate-500 font-mono truncate max-w-[200px]">
+                          Location: {slot.locationDetails}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <button
+                  onClick={() => handleBookSlot(selectedSlotId)}
+                  disabled={!selectedSlotId || bookingSubmitting}
+                  className="w-full py-3 rounded-xl bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold text-sm flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_0_15px_rgba(20,184,166,0.2)] border-none"
+                >
+                  {bookingSubmitting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    "Confirm Booking"
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Preferences */}
         <div className="space-y-4">

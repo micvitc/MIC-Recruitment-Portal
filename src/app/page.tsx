@@ -4,6 +4,8 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Press_Start_2P } from "next/font/google";
 import RetroLoader from "@/components/RetroLoader";
+import MicLogo from "@/components/MicLogo";
+import { playRetroSound } from "@/lib/audio";
 
 const pressStart = Press_Start_2P({
   weight: "400",
@@ -19,20 +21,88 @@ interface PageConfig {
   cycleOpen: boolean;
   footerBlinkText: string;
   marqueeText: string;
+  cycle?: {
+    isOpen: boolean;
+    startAt?: string;
+    endAt?: string;
+  };
 }
+
+interface CountdownProps {
+  targetDate: string;
+  onExpiry?: () => void;
+}
+
+const CountdownTimer: React.FC<CountdownProps> = ({ targetDate, onExpiry }) => {
+  const [timeLeft, setTimeLeft] = useState<{
+    days: number;
+    hours: number;
+    minutes: number;
+    seconds: number;
+  } | null>(null);
+
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const difference = new Date(targetDate).getTime() - new Date().getTime();
+      if (difference <= 0) {
+        setTimeLeft(null);
+        if (onExpiry) onExpiry();
+        return;
+      }
+      setTimeLeft({
+        days: Math.floor(difference / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
+        minutes: Math.floor((difference / 1000 / 60) % 60),
+        seconds: Math.floor((difference / 1000) % 60),
+      });
+    };
+
+    calculateTimeLeft();
+    const interval = setInterval(calculateTimeLeft, 1000);
+    return () => clearInterval(interval);
+  }, [targetDate, onExpiry]);
+
+  if (!timeLeft) return null;
+
+  return (
+    <div className="bg-[#FFE4D6]/90 border-4 border-black rounded-[6px] p-4 text-center space-y-2 font-bold w-full max-w-sm mx-auto shadow-[4px_4px_0px_0px_rgba(0,0,0,0.15)] animate-pulse">
+      <p className="text-[10px] text-[#A93710] uppercase tracking-widest font-extrabold">Recruitment Opens In</p>
+      <div className="flex gap-2 justify-center text-[13px] text-black">
+        <span className="bg-[#C85A28]/10 px-2 py-1 border-2 border-black rounded-[4px] font-extrabold">
+          {String(timeLeft.days).padStart(2, "0")}D
+        </span>
+        <span className="self-center font-extrabold">:</span>
+        <span className="bg-[#C85A28]/10 px-2 py-1 border-2 border-black rounded-[4px] font-extrabold">
+          {String(timeLeft.hours).padStart(2, "0")}H
+        </span>
+        <span className="self-center font-extrabold">:</span>
+        <span className="bg-[#C85A28]/10 px-2 py-1 border-2 border-black rounded-[4px] font-extrabold">
+          {String(timeLeft.minutes).padStart(2, "0")}M
+        </span>
+        <span className="self-center font-extrabold">:</span>
+        <span className="bg-[#C85A28]/10 px-2 py-1 border-2 border-black rounded-[4px] font-extrabold">
+          {String(timeLeft.seconds).padStart(2, "0")}S
+        </span>
+      </div>
+    </div>
+  );
+};
 
 function RetroPipe({ height, top, left, isTop }: { height: number; top: string; left: string; isTop: boolean }) {
   return (
-    <img
-      src="/green_pipe.svg"
-      alt="Pipe"
-      className="absolute select-none pointer-events-none z-10 w-[52px] pixelated"
+    <div
+      className="absolute select-none pointer-events-none z-30 w-[52px] pixelated"
       style={{
         left,
         top,
         height: `${height}px`,
         transform: isTop ? "none" : "scaleY(-1)",
-        objectFit: "fill",
+        borderStyle: "solid",
+        borderWidth: "0 0 24px 0",
+        borderColor: "transparent",
+        borderImageSource: "url(/green_pipe.png)",
+        borderImageSlice: "0 0 64 0 fill",
+        borderImageRepeat: "stretch",
       }}
     />
   );
@@ -44,16 +114,20 @@ export default function Homepage() {
   const [cycleOpen, setCycleOpen] = useState(true);
   const [pageConfig, setPageConfig] = useState<PageConfig | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   // Fetch recruitment page configuration on mount
   useEffect(() => {
-    fetch("/api/pages/home")
-      .then((res) => res.json())
-      .then((data) => {
+    Promise.all([
+      fetch("/api/pages/home").then((res) => res.json()),
+      fetch("/api/auth/session").then((res) => res.ok ? res.json() : null)
+    ])
+      .then(([data, session]) => {
         if (data.success) {
           setPageConfig(data);
           setCycleOpen(data.cycleOpen);
         }
+        setIsLoggedIn(!!session?.user);
       })
       .catch(() => {})
       .finally(() => {
@@ -75,44 +149,13 @@ export default function Homepage() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const playRetroSound = (type: "select" | "open") => {
-    if (typeof window === "undefined") return;
-    try {
-      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-      if (!AudioContextClass) return;
-      const ctx = new AudioContextClass();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
 
-      if (type === "select") {
-        osc.type = "square";
-        osc.frequency.setValueAtTime(600, ctx.currentTime);
-        osc.frequency.setValueAtTime(900, ctx.currentTime + 0.08);
-        gain.gain.setValueAtTime(0.08, ctx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.2);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.2);
-      } else if (type === "open") {
-        osc.type = "sawtooth";
-        osc.frequency.setValueAtTime(300, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(600, ctx.currentTime + 0.2);
-        gain.gain.setValueAtTime(0.05, ctx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.25);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.25);
-      }
-    } catch (e) {
-      console.warn("Audio Context failed", e);
-    }
-  };
 
   return (
     <>
       <RetroLoader isLoading={isLoading} title="BOOTING THE QUEST" />
 
-      <div className={`${pressStart.variable} font-press-start w-full h-screen overflow-hidden select-none bg-[#DD9955] relative flex justify-center items-center`}>
+      <div className={`${pressStart.variable} font-press-start w-full h-[100dvh] overflow-hidden select-none bg-[#DD9955] relative flex justify-center items-center`}>
         {/* Absolute positioned scaled background container centered horizontally */}
         <div
           className="absolute top-0 left-1/2 -translate-x-1/2"
@@ -140,7 +183,7 @@ export default function Homepage() {
 
             {/* Background Skyline */}
             <img src="/pixel_cloud_large.svg" alt="Skyline" className="absolute top-[566px] left-0 w-[1437px] h-[458px] object-cover opacity-100 pointer-events-none select-none pixelated" />
-            <img src="/pixel_cloud_large.svg" alt="Skyline" className="absolute top-[566px] left-[1437px] w-[1437px] h-[458px] object-cover opacity-100 pointer-events-none select-none pixelated" />
+            <img src="/pixel_cloud_large.svg" alt="Skyline" className="absolute top-[566px] left-[1435px] w-[1437px] h-[458px] object-cover opacity-100 pointer-events-none select-none pixelated" />
             
             {/* Midground Skyline Blocks */}
             {Array.from({ length: 12 }).map((_, idx) => (
@@ -148,18 +191,23 @@ export default function Homepage() {
             ))}
 
             {/* Green Bushes */}
-            <img src="/bushes_pixel.svg" alt="Bushes Left" className="absolute top-[739px] left-0 w-[1456px] h-[200px] z-4 pointer-events-none select-none pixelated" />
-            <img src="/bushes_pixel.svg" alt="Bushes Right" className="absolute top-[739px] left-[1456px] w-[1456px] h-[200px] z-4 pointer-events-none select-none pixelated" />
+            {Array.from({ length: 3 }).map((_, idx) => (
+              <img
+                key={`bush-${idx}`}
+                src="/bushes_pixel.svg"
+                alt={`Bushes ${idx}`}
+                className="absolute top-[739px] w-[1456px] h-[200px] z-4 pointer-events-none select-none pixelated"
+                style={{ left: `${idx * 1409}px` }}
+              />
+            ))}
 
             {/* Green Pipes framing the center (Aligned vertically to hold the signboard) */}
             <RetroPipe left="900px" top="-5px" height={250} isTop={true} />
             <RetroPipe left="1900px" top="-5px" height={250} isTop={true} />
             
-            <RetroPipe left="900px" top="730px" height={200} isTop={false} />
-            <RetroPipe left="1900px" top="730px" height={200} isTop={false} />
 
             {/* Main Hero Center Box (Inside Scaled Canvas so it perfectly aligns with the pipes) */}
-            <div className="absolute z-40 animate-pixel-slide-up" style={{ top: "220px", left: "860px", width: "1132px" }}>
+            <div className="absolute z-40 animate-pixel-slide-up" style={{ top: "170px", left: "860px", width: "1132px" }}>
               <div 
                 className="bg-[#FFE4D6] rounded-[10px] border-[6px] border-black flex flex-col items-center p-4 relative"
                 style={{ boxShadow: "16px 16px 0px 0px rgba(0,0,0,0.4)" }}
@@ -191,6 +239,16 @@ export default function Homepage() {
                     </div>
                   </div>
 
+                  {/* Countdown Timer */}
+                  {!cycleOpen && pageConfig?.cycle?.startAt && new Date(pageConfig.cycle.startAt) > new Date() && (
+                    <div className="w-full mt-2">
+                      <CountdownTimer 
+                        targetDate={pageConfig.cycle.startAt} 
+                        onExpiry={() => setCycleOpen(true)}
+                      />
+                    </div>
+                  )}
+
                   {/* Buttons */}
                   <div className="flex w-full gap-8 mt-6">
                     <button
@@ -203,7 +261,10 @@ export default function Homepage() {
                     
                     {cycleOpen ? (
                       <button
-                      onClick={() => { playRetroSound("select"); router.push("/login"); }}
+                      onClick={() => {
+                        playRetroSound("select");
+                        router.push(isLoggedIn ? "/recruitments" : "/login");
+                      }}
                       className="flex-1 bg-[#52AE26] hover:bg-[#72F418] text-white border-4 border-black py-6 px-6 text-[14px] font-bold tracking-widest transition-transform active:translate-y-1 flex items-center justify-center gap-2 group"
                       style={{ boxShadow: "6px 6px 0px 0px #000" }}
                     >
@@ -244,11 +305,21 @@ export default function Homepage() {
               </div>
               <div className="w-full flex-grow bg-[#DD9955] border-b-4 border-black relative overflow-hidden flex items-start pt-3">
                 <div className="flex whitespace-nowrap animate-marquee">
-                  <span className="inline-block text-[24px] text-[#CC7700] tracking-wider uppercase font-bold pr-10">
-                    {Array(6).fill(pageConfig?.marqueeText || "MICROSOFT INNOVATIONS CLUB TENURE 2026-2027").join("  ★  ")}
+                  <span className="inline-flex items-center shrink-0 text-[24px] text-[#CC7700] tracking-wider uppercase font-bold">
+                    {Array(6).fill(pageConfig?.marqueeText || "MICROSOFT INNOVATIONS CLUB TENURE 2026-2027").map((text, idx) => (
+                      <React.Fragment key={idx}>
+                        <span>{text}</span>
+                        <img src="/mic_logo_pixel.png" alt="MIC" className="w-8 h-8 md:w-10 md:h-10 mx-8 shrink-0" />
+                      </React.Fragment>
+                    ))}
                   </span>
-                  <span className="inline-block text-[24px] text-[#CC7700] tracking-wider uppercase font-bold pr-10">
-                    {Array(6).fill(pageConfig?.marqueeText || "MICROSOFT INNOVATIONS CLUB TENURE 2026-2027").join("  ★  ")}
+                  <span className="inline-flex items-center shrink-0 text-[24px] text-[#CC7700] tracking-wider uppercase font-bold">
+                    {Array(6).fill(pageConfig?.marqueeText || "MICROSOFT INNOVATIONS CLUB TENURE 2026-2027").map((text, idx) => (
+                      <React.Fragment key={idx}>
+                        <span>{text}</span>
+                        <img src="/mic_logo_pixel.png" alt="MIC" className="w-8 h-8 md:w-10 md:h-10 mx-8 shrink-0" />
+                      </React.Fragment>
+                    ))}
                   </span>
                 </div>
               </div>
@@ -257,13 +328,11 @@ export default function Homepage() {
         </div>
 
         {/* Static Header Elements */}
-        <div className="absolute top-6 left-8 z-30">
-          <img src="/mic_logo_pixel.png" alt="MIC Logo" className="pixelated w-[110px] h-[79px] select-none pointer-events-none hover:animate-retro-shake" />
-        </div>
+        <MicLogo />
 
         <div className="absolute top-8 right-8 z-30">
           <button
-            onClick={() => { playRetroSound("open"); router.push("/faqs"); }}
+            onClick={() => { playRetroSound("open"); router.push("/faqs?from=/"); }}
             className="bg-[#7CA922] hover:bg-[#8CB932] text-black text-[11px] font-bold py-2 px-5 border-4 border-black cursor-pointer uppercase tracking-wider transition-transform active:translate-y-1"
             style={{ boxShadow: "4px 4px 0px 0px #000" }}
           >

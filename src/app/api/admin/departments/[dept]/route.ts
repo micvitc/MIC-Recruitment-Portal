@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { dbConnect } from "@/lib/mongodb";
 import Department from "@/models/Department";
+import { deptUpdateSchema } from "@/lib/validation";
 
 interface RouteParams {
   params: Promise<{ dept: string }>;
@@ -44,14 +45,21 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
   await dbConnect();
   const body = await req.json();
 
-  // Only allow safe fields to be updated
-  const { stages, totalStages, isActive, maxCapacity } = body;
+  const parseResult = deptUpdateSchema.safeParse(body);
+  if (!parseResult.success) {
+    return NextResponse.json(
+      { success: false, error: parseResult.error.issues[0]?.message || "Validation failed." },
+      { status: 400 }
+    );
+  }
+
+  const { isActive, totalStages, stageToggles, stages } = parseResult.data;
 
   const update: Record<string, unknown> = {};
-  if (stages !== undefined) update.stages = stages;
   if (totalStages !== undefined) update.totalStages = totalStages;
   if (isActive !== undefined) update.isActive = isActive;
-  if (maxCapacity !== undefined) update.maxCapacity = maxCapacity;
+  if (stageToggles !== undefined) update.stageToggles = stageToggles;
+  if (stages !== undefined) update.stages = stages;
 
   const department = await Department.findOneAndUpdate(
     { slug: dept },
@@ -67,7 +75,6 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
   const { logAdminAction } = await import("@/lib/logger");
   const details = [];
   if (isActive !== undefined) details.push(`Active: ${isActive}`);
-  if (maxCapacity !== undefined) details.push(`Capacity: ${maxCapacity}`);
   if (totalStages !== undefined) details.push(`Stages: ${totalStages}`);
   
   await logAdminAction(

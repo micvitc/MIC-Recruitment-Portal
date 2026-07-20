@@ -81,7 +81,7 @@ export async function GET() {
       },
       { $sort: { _id: 1 } },
     ]),
-    Department.find({}, "slug name maxCapacity isActive").lean(),
+    Department.find({}, "slug name isActive").lean(),
     Application.aggregate([
       { $match: { cycleId: "2026-27", overallStatus: "selected" } },
       {

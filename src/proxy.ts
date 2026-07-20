@@ -154,7 +154,7 @@ function isApiAdminRoute(pathname: string) {
 // ---------------------------------------------------------------------------
 // Main middleware — NextAuth v5 pattern
 // ---------------------------------------------------------------------------
-export default auth(async (req: NextAuthRequest) => {
+export const proxy = auth(async (req: NextAuthRequest) => {
   const { pathname } = req.nextUrl;
   const method = req.method ?? "GET";
   const session = req.auth;
@@ -202,8 +202,8 @@ export default auth(async (req: NextAuthRequest) => {
   }
   // ─────────────────────────────────────────────────────────────────────────
 
-  // --- Protect candidate routes (/recruitments, /profile, /apply/*) ---
-  const isCandidateRoute = pathname === "/recruitments" || pathname === "/profile" || pathname.startsWith("/apply");
+  // --- Protect candidate routes (/profile, /apply/*) ---
+  const isCandidateRoute = pathname === "/profile" || pathname.startsWith("/apply");
   if (isCandidateRoute) {
     if (!session?.user) {
       const url = req.nextUrl.clone();

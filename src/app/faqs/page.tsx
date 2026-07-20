@@ -9,6 +9,9 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from "@/components/ui/accordion";
+import MicLogo from "@/components/MicLogo";
+import BackButton from "@/components/BackButton";
+import { playRetroSound } from "@/lib/audio";
 
 const pressStart = Press_Start_2P({
   weight: "400",
@@ -19,54 +22,7 @@ const pressStart = Press_Start_2P({
 export default function FaqsPage() {
   const router = useRouter();
 
-  const playRetroSound = (type: "select" | "jump" | "open" | "close") => {
-    if (typeof window === "undefined") return;
-    try {
-      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-      if (!AudioContextClass) return;
-      const ctx = new AudioContextClass();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
 
-      if (type === "jump") {
-        osc.type = "sine";
-        osc.frequency.setValueAtTime(400, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.15);
-        gain.gain.setValueAtTime(0.1, ctx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.15);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.15);
-      } else if (type === "select") {
-        osc.type = "square";
-        osc.frequency.setValueAtTime(600, ctx.currentTime);
-        osc.frequency.setValueAtTime(900, ctx.currentTime + 0.08);
-        gain.gain.setValueAtTime(0.08, ctx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.2);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.2);
-      } else if (type === "open") {
-        osc.type = "sawtooth";
-        osc.frequency.setValueAtTime(300, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(600, ctx.currentTime + 0.2);
-        gain.gain.setValueAtTime(0.05, ctx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.25);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.25);
-      } else if (type === "close") {
-        osc.type = "sawtooth";
-        osc.frequency.setValueAtTime(600, ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(300, ctx.currentTime + 0.2);
-        gain.gain.setValueAtTime(0.05, ctx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.25);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.25);
-      }
-    } catch (e) {
-      console.warn("Audio Context failed", e);
-    }
-  };
 
   const faqs = [
     {
@@ -89,7 +45,7 @@ export default function FaqsPage() {
 
   return (
     <main
-      className={`${pressStart.variable} font-press-start relative min-h-screen w-full flex flex-col items-center justify-center p-4 select-none overflow-hidden bg-[linear-gradient(180deg,#1188EE_0%,#0E8AEA_25%,#1093EB_35%,#1197EC_46%,#16B6F4_52%,#10CBF1_56%,#0FC6F1_60%,#15DEF0_65%,#15DEF0_81%)]`}
+      className={`${pressStart.variable} font-press-start relative min-h-[100dvh] w-full flex flex-col items-center justify-center p-4 select-none overflow-hidden bg-[linear-gradient(180deg,#1188EE_0%,#0E8AEA_25%,#1093EB_35%,#1197EC_46%,#16B6F4_52%,#10CBF1_56%,#0FC6F1_60%,#15DEF0_65%,#15DEF0_81%)]`}
     >
       {/* ================= BACKGROUND SKY & CLOUDS ================= */}
       <img
@@ -126,18 +82,18 @@ export default function FaqsPage() {
       </div>
 
       {/* ================= CITY BUILDINGS & BUSHES ALONG HORIZON ================= */}
-      <div className="absolute bottom-[60px] md:bottom-[76px] left-0 w-full h-[250px] md:h-[350px] overflow-hidden pointer-events-none z-0 flex items-end">
+      <div className="absolute bottom-[60px] md:bottom-[76px] left-0 w-full h-[280px] md:h-[360px] overflow-hidden pointer-events-none z-0 flex items-end">
         {/* Continuous Large Background Cloud Silhouettes */}
         <div className="absolute bottom-0 left-0 flex w-[3000px] opacity-100">
           <img
             src="/pixel_cloud_large.svg"
             alt="Skyline Back Left"
-            className="w-[1437px] h-[280px] md:h-[360px] object-cover pixelated shrink-0"
+            className="w-[1437px] h-[280px] md:h-[360px] object-cover object-top pixelated shrink-0"
           />
           <img
             src="/pixel_cloud_large.svg"
             alt="Skyline Back Right"
-            className="w-[1510px] h-[280px] md:h-[360px] object-cover pixelated shrink-0"
+            className="w-[1510px] h-[280px] md:h-[360px] object-cover object-top pixelated shrink-0"
           />
         </div>
         {/* Continuous City Skyline */}
@@ -176,33 +132,47 @@ export default function FaqsPage() {
         {/* Soil Base with Marquee Text */}
         <div className="w-full flex-grow bg-[#DD9955] border-b-4 border-black relative overflow-hidden flex items-center">
           <div className="flex whitespace-nowrap animate-marquee">
-            <span className="inline-block text-[18px] md:text-[22px] text-[#CC7700] tracking-wider uppercase font-bold pr-10">
-              {Array(6).fill("MICROSOFT INNOVATIONS CLUB TENURE 2026-2027").join("  ★  ")}
+            <span className="inline-flex items-center shrink-0 text-[24px] text-[#CC7700] tracking-wider uppercase font-bold">
+              {Array(6).fill("MICROSOFT INNOVATIONS CLUB TENURE 2026-2027").map((text, idx) => (
+                <React.Fragment key={idx}>
+                  <span>{text}</span>
+                  <img src="/mic_logo_pixel.png" alt="MIC" className="w-8 h-8 md:w-10 md:h-10 mx-8 shrink-0" />
+                </React.Fragment>
+              ))}
             </span>
-            <span className="inline-block text-[18px] md:text-[22px] text-[#CC7700] tracking-wider uppercase font-bold pr-10">
-              {Array(6).fill("MICROSOFT INNOVATIONS CLUB TENURE 2026-2027").join("  ★  ")}
+            <span className="inline-flex items-center shrink-0 text-[24px] text-[#CC7700] tracking-wider uppercase font-bold">
+              {Array(6).fill("MICROSOFT INNOVATIONS CLUB TENURE 2026-2027").map((text, idx) => (
+                <React.Fragment key={idx}>
+                  <span>{text}</span>
+                  <img src="/mic_logo_pixel.png" alt="MIC" className="w-8 h-8 md:w-10 md:h-10 mx-8 shrink-0" />
+                </React.Fragment>
+              ))}
             </span>
           </div>
         </div>
       </div>
 
       {/* ================= TOP LEFT LOGO ================= */}
-      <div className="absolute left-6 top-6 z-30 flex items-center gap-3">
-        <img
-          src="/mic_logo_pixel.png"
-          alt="MIC Logo"
-          className="w-[85px] h-[61px] md:w-[110px] md:h-[79px] pixelated pointer-events-none"
-        />
-      </div>
+      <MicLogo />
+      
+      <BackButton onClick={() => router.push("/recruitments")} />
 
       {/* ================= TOP RIGHT CLOSE BUTTON (Close_icon.svg) ================= */}
       <button
         onClick={() => {
           playRetroSound("close");
-          router.push("/recruitments");
+          let fallback = "/recruitments";
+          if (typeof window !== "undefined") {
+            const params = new URLSearchParams(window.location.search);
+            const from = params.get("from");
+            if (from) {
+              fallback = from;
+            }
+          }
+          router.push(fallback);
         }}
         className="fixed top-6 right-6 md:right-10 z-50 cursor-pointer hover:scale-110 active:scale-95 transition-transform duration-100 flex items-center justify-center select-none"
-        title="Back to Recruitments"
+        title="Close"
       >
         <img
           src="/Close_icon.svg"

@@ -61,11 +61,14 @@ export async function sendStageUpdate(userEmail: string, status: string, notes?:
   }
 
   const isAccepted = status === 'passed';
-  const color = isAccepted ? '#10b981' : '#ef4444';
-  const title = isAccepted ? 'LEVEL UP! Quest Advanced' : 'GAME OVER: Quest Concluded';
-  const body = isAccepted
-    ? 'Congratulations! You have successfully passed this stage of the recruitment process. Please check the portal for instructions on the next stage.'
-    : 'We appreciate the time you took to apply, but unfortunately, we will not be moving forward with your application for this quest at this time.';
+  if (!isAccepted) {
+    console.log(`[MAILER] Rejection/failed email blocked for ${userEmail} as per settings.`);
+    return;
+  }
+
+  const color = '#10b981';
+  const title = 'LEVEL UP! Quest Advanced';
+  const body = 'Congratulations! You have successfully passed this stage of the recruitment process. Please check the portal for instructions on the next stage.';
 
   try {
     await transporter.sendMail({
@@ -85,5 +88,47 @@ export async function sendStageUpdate(userEmail: string, status: string, notes?:
     });
   } catch (error) {
     console.error('[MAILER] Failed to send stage update:', error);
+  }
+}
+
+export async function sendInterviewBookingConfirmation(
+  userEmail: string,
+  timeString: string,
+  locationDetails: string,
+  isOnline: boolean,
+  meetingLink?: string
+) {
+  if (!smtpEmail || !smtpPassword) {
+    console.warn(`[MAILER] Skipping booking confirmation for ${userEmail}. SMTP credentials are not set.`);
+    return;
+  }
+
+  const title = "MIC Recruitment - Interview Confirmed!";
+  const locationText = isOnline ? `Online (Google Meet)` : `Offline (${locationDetails})`;
+
+  try {
+    await transporter.sendMail({
+      from: `"MIC Recruitment" <${smtpEmail}>`,
+      to: userEmail,
+      subject: title,
+      html: `
+        <div style="font-family: monospace; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f8f9fa; border: 4px solid #14b8a6;">
+          <h1 style="color: #14b8a6; text-transform: uppercase;">Interview Confirmed!</h1>
+          <p>Hello,</p>
+          <p>Your interview slot has been successfully scheduled. Here are the details:</p>
+          <div style="margin: 20px 0; padding: 15px; background-color: #ffffff; border: 2px dashed #14b8a6; line-height: 1.6;">
+            <p><strong>Time:</strong> ${timeString}</p>
+            <p><strong>Format:</strong> ${locationText}</p>
+            ${isOnline && meetingLink ? `<p><strong>Google Meet Link:</strong> <a href="${meetingLink}" target="_blank" style="color: #14b8a6; font-weight: bold;">Join Meeting</a></p>` : ''}
+            ${!isOnline ? `<p><strong>Location:</strong> ${locationDetails}</p>` : ''}
+          </div>
+          <p>Please make sure to be on time. Good luck!</p>
+          <br/>
+          <p>- MIC Core Team</p>
+        </div>
+      `,
+    });
+  } catch (error) {
+    console.error('[MAILER] Failed to send booking confirmation:', error);
   }
 }

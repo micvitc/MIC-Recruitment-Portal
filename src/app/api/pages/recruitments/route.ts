@@ -22,6 +22,7 @@ export async function GET() {
       skills: d.skills ?? "",
       iconType: d.iconType ?? "dev",
       role: d.name,
+      stage1Open: d.stageToggles ? (d.stageToggles["1"] !== false) : true,
     }));
 
     const techQuests = formattedQuests.filter((q) => q.type === "tech");

@@ -10,7 +10,8 @@ export async function GET() {
   try {
     await dbConnect();
     const cycle = await RecruitmentCycle.findOne({ cycleId: CYCLE_ID }).lean();
-    const cycleOpen = cycle?.isOpen ?? false;
+    const { isCycleOpen } = await import("@/lib/cycle");
+    const cycleOpen = isCycleOpen(cycle);
     const cycleLabel = cycle?.label ?? "MIC Recruitment 2026–27";
 
     return NextResponse.json({
@@ -23,6 +24,7 @@ export async function GET() {
         cycleOpen ? "ARE YOU READY, PLAYER?" : "RECRUITMENTS ARE CLOSED."
       ],
       cycleOpen,
+      cycle,
       footerBlinkText: cycleOpen ? "[ PRESS BUTTON TO BEGIN ]" : "[ QUEST CLOSED ]",
       marqueeText: "MICROSOFT INNOVATIONS CLUB TENURE 2026-2027"
     });

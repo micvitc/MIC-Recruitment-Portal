@@ -11,7 +11,8 @@ export interface FormField {
     | "checkbox"
     | "url"
     | "number"
-    | "email";
+    | "email"
+    | "file";
   placeholder?: string;
   options?: string[];
   required: boolean;
@@ -23,6 +24,7 @@ export interface StageConfig {
   stage: number;
   title: string;
   description: string;
+  taskPdf?: string;
   formFields: FormField[];
 }
 
@@ -33,12 +35,12 @@ export interface IDepartment extends Document {
   totalStages: number;
   stages: StageConfig[];
   isActive: boolean;
-  maxCapacity: number;
   desc?: string;
   tagline?: string;
   description?: string;
   skills?: string;
   iconType?: string;
+  stageToggles?: Record<string, boolean>;
 }
 
 const FormFieldSchema = new Schema<FormField>(
@@ -56,6 +58,7 @@ const FormFieldSchema = new Schema<FormField>(
         "url",
         "number",
         "email",
+        "file",
       ],
       required: true,
     },
@@ -73,6 +76,7 @@ const StageConfigSchema = new Schema<StageConfig>(
     stage: { type: Number, required: true },
     title: { type: String, required: true },
     description: { type: String, required: true },
+    taskPdf: String,
     formFields: { type: [FormFieldSchema], default: [] },
   },
   { _id: false }
@@ -86,12 +90,16 @@ const DepartmentSchema = new Schema<IDepartment>(
     totalStages: { type: Number, default: 2 },
     stages: { type: [StageConfigSchema], default: [] },
     isActive: { type: Boolean, default: true },
-    maxCapacity: { type: Number, default: 20 },
     desc: String,
     tagline: String,
     description: String,
     skills: String,
     iconType: String,
+    stageToggles: {
+      type: Map,
+      of: Boolean,
+      default: { "1": true, "2": true, "3": true, "4": true, "5": true },
+    },
   },
   { timestamps: true }
 );

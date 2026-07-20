@@ -5,7 +5,7 @@ import Application from "@/models/Application";
 import Department from "@/models/Department";
 import RecruitmentCycle from "@/models/RecruitmentCycle";
 import { sendApplicationReceipt } from "@/lib/mailer";
-import type { FormField } from "@/models/Department";
+import { validateResponses } from "@/lib/validation";
 
 const CYCLE_ID = "2026-27";
 
@@ -13,53 +13,6 @@ interface RouteParams {
   params: Promise<{ dept: string; n: string }>;
 }
 
-import { z } from "zod";
-
-function validateResponses(
-  formFields: FormField[],
-  responses: Record<string, unknown>
-): { data?: Record<string, unknown>; error?: string } {
-  const schemaShape: Record<string, z.ZodTypeAny> = {};
-
-  for (const field of formFields) {
-    let fieldSchema: z.ZodTypeAny;
-
-    if (field.type === "url") {
-      const urlStr = z.string().url(`"${field.label}" must be a valid URL.`).max(2000, `"${field.label}" URL is too long.`);
-      fieldSchema = z.union([urlStr, z.array(urlStr)]);
-    } else if (field.type === "checkbox") {
-      fieldSchema = z.union([z.string(), z.array(z.string())]);
-    } else {
-      fieldSchema = z.string().max(field.maxLength || 5000, `"${field.label}" exceeds the maximum length of ${field.maxLength || 5000} characters.`);
-    }
-
-    if (field.required) {
-      if (field.type === "checkbox" || field.type === "url") {
-        fieldSchema = z.union([
-          z.string().min(1, `"${field.label}" is required.`),
-          z.array(z.string().min(1, `"${field.label}" is required.`)).min(1, `"${field.label}" is required.`)
-        ]);
-      } else {
-        fieldSchema = z.string().min(1, `"${field.label}" is required.`).max(field.maxLength || 5000, `"${field.label}" exceeds maximum length.`);
-      }
-    } else {
-      // Optional fields can be undefined, null, or empty string
-      fieldSchema = z.union([fieldSchema, z.literal(""), z.null(), z.undefined()]).optional();
-    }
-
-    schemaShape[field.id] = fieldSchema;
-  }
-
-  // Default z.object() strips any keys not defined in schemaShape, preventing NoSQL injection/bloat
-  const schema = z.object(schemaShape);
-
-  const result = schema.safeParse(responses);
-  if (!result.success) {
-    const err = result.error as z.ZodError;
-    return { error: err.issues[0]?.message ?? "Validation failed." };
-  }
-  return { data: result.data };
-}
 
 // GET — fetch current user's status
 export async function GET(_req: NextRequest, { params }: RouteParams) {
@@ -72,9 +25,10 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
 
   await dbConnect();
 
-  const [application, department] = await Promise.all([
+  const [application, department, cycle] = await Promise.all([
     Application.findOne({ userId: session.user.id, cycleId: CYCLE_ID }),
     Department.findOne({ slug: dept }),
+    RecruitmentCycle.findOne({ cycleId: CYCLE_ID }),
   ]);
 
   if (!application) {
@@ -84,9 +38,25 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ success: false, error: "Department not found." }, { status: 404 });
   }
 
+  const { isStageOpen } = await import("@/lib/cycle");
+  if (!isStageOpen(cycle, department, stageNum)) {
+    return NextResponse.json(
+      { success: false, error: `Stage ${stageNum} is currently closed for this department.` },
+      { status: 403 }
+    );
+  }
+
   // Determine which preference this dept belongs to
   const isFirst = application.firstPreference === dept;
   const progress = isFirst ? application.firstPrefProgress : application.secondPrefProgress;
+
+  if (stageNum > progress.currentStage) {
+    return NextResponse.json(
+      { success: false, error: "This stage is locked. Please wait for the recruitment team to review your previous stages." },
+      { status: 403 }
+    );
+  }
+
   const stageSubmission = progress.stages.find((s) => s.stage === stageNum);
   const stageConfig = department.stages.find((s) => s.stage === stageNum);
 
@@ -116,17 +86,10 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
   try {
     await dbConnect();
 
-    const cycle = await RecruitmentCycle.findOne({ cycleId: CYCLE_ID });
-    if (!cycle?.isOpen) {
-      return NextResponse.json(
-        { success: false, error: "Recruitment is currently closed." },
-        { status: 403 }
-      );
-    }
-
-    const [application, department] = await Promise.all([
+    const [application, department, cycle] = await Promise.all([
       Application.findOne({ userId: session.user.id, cycleId: CYCLE_ID }),
       Department.findOne({ slug: dept }),
+      RecruitmentCycle.findOne({ cycleId: CYCLE_ID })
     ]);
 
     if (!application) {
@@ -134,6 +97,14 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     }
     if (!department) {
       return NextResponse.json({ success: false, error: "Department not found." }, { status: 404 });
+    }
+
+    const { isStageOpen } = await import("@/lib/cycle");
+    if (!isStageOpen(cycle, department, stageNum)) {
+      return NextResponse.json(
+        { success: false, error: `Stage ${stageNum} is currently closed for this department.` },
+        { status: 403 }
+      );
     }
 
     const isFirst = application.firstPreference === dept;
@@ -208,26 +179,17 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
         }
       );
     } else {
-      // Push new stage submission
-      const nextStage = Math.max(progress.currentStage, stageNum + 1);
-      const reachedMax = nextStage > department.totalStages;
-
+      // Do not automatically advance the candidate's currentStage.
+      // The admin will evaluate and advance them manually.
       await Application.updateOne(
         { userId: session.user.id, cycleId: CYCLE_ID },
         {
-          $push: { [`${progressKey}.stages`]: submission },
-          $set: {
-            [`${progressKey}.currentStage`]: reachedMax
-              ? department.totalStages
-              : nextStage,
-          },
+          $push: { [`${progressKey}.stages`]: submission }
         }
       );
 
       // Send email receipt on initial application submission (stage 1)
       if (stageNum === 1) {
-        // we use session.user.email, which requires adding email to session or fetching it.
-        // wait, application model has userEmail
         sendApplicationReceipt(application.userEmail, department.name).catch(console.error);
       }
     }
@@ -235,8 +197,8 @@ export async function POST(req: NextRequest, { params }: RouteParams) {
     return NextResponse.json({
       success: true,
       message: `Stage ${stageNum} submitted successfully.`,
-      nextStage: Math.min(stageNum + 1, department.totalStages),
-      isLastStage: stageNum >= department.totalStages,
+      nextStage: stageNum,
+      isLastStage: true, // Forces frontend to show the Success screen and not navigate to the next stage automatically
     });
   } catch (err) {
     console.error("stage submit error:", err);
@@ -261,18 +223,23 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
   try {
     await dbConnect();
 
-    const cycle = await RecruitmentCycle.findOne({ cycleId: CYCLE_ID });
-    if (!cycle?.isOpen) {
+    const [application, department, cycle] = await Promise.all([
+      Application.findOne({ userId: session.user.id, cycleId: CYCLE_ID }),
+      Department.findOne({ slug: dept }),
+      RecruitmentCycle.findOne({ cycleId: CYCLE_ID })
+    ]);
+
+    if (!application || !department) {
+      return NextResponse.json({ success: false, error: "Not found." }, { status: 404 });
+    }
+
+    const { isStageOpen } = await import("@/lib/cycle");
+    if (!isStageOpen(cycle, department, stageNum)) {
       return NextResponse.json(
-        { success: false, error: "Recruitment is closed. Editing is no longer available." },
+        { success: false, error: `Stage ${stageNum} is closed. Editing is no longer available.` },
         { status: 403 }
       );
     }
-
-    const [application, department] = await Promise.all([
-      Application.findOne({ userId: session.user.id, cycleId: CYCLE_ID }),
-      Department.findOne({ slug: dept }),
-    ]);
 
     if (!application || !department) {
       return NextResponse.json({ success: false, error: "Not found." }, { status: 404 });
@@ -322,8 +289,8 @@ export async function PUT(req: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ 
       success: true, 
       message: "Stage updated successfully.",
-      nextStage: Math.min(stageNum + 1, department.totalStages),
-      isLastStage: stageNum >= department.totalStages,
+      nextStage: stageNum,
+      isLastStage: true,
     });
   } catch (err) {
     console.error("stage edit error:", err);

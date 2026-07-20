@@ -50,8 +50,7 @@ export async function POST(req: NextRequest) {
       const currentStageIdx = progress.stages.findIndex((s) => s.stage === progress.currentStage);
 
       if (action === "advance") {
-        const nextStage = progress.currentStage + 1;
-        const isLastStage = nextStage > (department?.totalStages ?? 2);
+        const currentStage = progress.currentStage;
 
         if (currentStageIdx !== -1) {
           if (preference === "first") {
@@ -67,19 +66,43 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        if (isLastStage) {
+        if (currentStage === 2) {
+          if (preference === "first") {
+            app.firstPrefProgress.currentStage = 3;
+            app.firstPrefProgress.status = "active";
+          } else {
+            app.secondPrefProgress.currentStage = 3;
+            app.secondPrefProgress.status = "active";
+          }
+          app.overallStatus = "in-progress";
+        } else if (currentStage === 3) {
+          if (preference === "first") {
+            app.firstPrefProgress.currentStage = 4;
+            app.firstPrefProgress.status = "active";
+          } else {
+            app.secondPrefProgress.currentStage = 4;
+            app.secondPrefProgress.status = "active";
+          }
+          app.overallStatus = "in-progress";
+          
+          // Auto-push the Stage 4 (Interview) pending entry to progress stages array
+          const targetProgress = preference === "first" ? app.firstPrefProgress : app.secondPrefProgress;
+          targetProgress.stages.push({
+            stage: 4,
+            submittedAt: new Date(),
+            responses: {},
+            result: "pending",
+          } as any);
+        } else if (currentStage === 4) {
           if (preference === "first") {
             app.firstPrefProgress.status = "passed";
+            if (app.secondPreference) {
+              app.secondPrefProgress.status = "rejected";
+            }
           } else {
             app.secondPrefProgress.status = "passed";
           }
           app.overallStatus = "selected";
-        } else {
-          if (preference === "first") {
-            app.firstPrefProgress.currentStage = nextStage;
-          } else {
-            app.secondPrefProgress.currentStage = nextStage;
-          }
         }
       } else {
         // reject
@@ -99,8 +122,13 @@ export async function POST(req: NextRequest) {
 
         if (preference === "first") {
           app.firstPrefProgress.status = "rejected";
-          app.activePreference = "second";
-          app.secondPrefProgress.status = "active";
+          if (app.secondPreference && (app.secondPreference as string) !== "") {
+            app.activePreference = "second";
+            app.secondPrefProgress.status = "active";
+            app.overallStatus = "in-progress";
+          } else {
+            app.overallStatus = "rejected";
+          }
         } else {
           app.secondPrefProgress.status = "rejected";
           if (app.firstPrefProgress.status === "rejected") {
@@ -113,8 +141,10 @@ export async function POST(req: NextRequest) {
       await app.save();
       processedEmails.push(app.userEmail);
 
-      // Email update (non-blocking background task)
-      sendStageUpdate(app.userEmail, action === "advance" ? "passed" : "rejected", note).catch(console.error);
+      // Email update (non-blocking background task) only on advance
+      if (action === "advance") {
+        sendStageUpdate(app.userEmail, "passed", note).catch(console.error);
+      }
     }
 
     // Log the bulk admin action

@@ -20,6 +20,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AlertDialog } from "@/components/ui/dialog";
 
+interface PanelistScore {
+  interviewerEmail: string;
+  scores: Record<string, number>;
+  note?: string;
+  createdAt: string;
+}
+
 interface StageSubmission {
   stage: number;
   submittedAt: string;
@@ -29,6 +36,7 @@ interface StageSubmission {
   reviewedAt?: string;
   responses: Record<string, unknown>;
   scores?: Record<string, number>;
+  panelistScores?: PanelistScore[];
 }
 
 interface PrefProgress {
@@ -40,6 +48,7 @@ interface PrefProgress {
 interface Application {
   _id: string;
   userEmail: string;
+  userName?: string;
   firstPreference: string;
   secondPreference: string;
   firstPrefType: string;
@@ -48,7 +57,26 @@ interface Application {
   overallStatus: string;
   firstPrefProgress: PrefProgress;
   secondPrefProgress: PrefProgress;
+  fullName: string;
+  phone: string;
+  regNo: string;
+  year: string;
+  branch: string;
+  whyMic: string;
   createdAt: string;
+}
+interface FormField {
+  id: string;
+  label: string;
+  type: string;
+  placeholder?: string;
+  required?: boolean;
+}
+interface StageConfig {
+  stage: number;
+  title: string;
+  description?: string;
+  formFields: FormField[];
 }
 interface ClientDepartment {
   slug: string;
@@ -56,7 +84,7 @@ interface ClientDepartment {
   type: "tech" | "non-tech";
   totalStages: number;
   isActive: boolean;
-  maxCapacity: number;
+  stages: StageConfig[];
 }
 
 const DEPT_NAMES: Record<string, string> = {
@@ -71,20 +99,57 @@ const DEPT_NAMES: Record<string, string> = {
   "content-media": "Content & Media",
 };
 
-function ResponseViewer({ responses }: { responses: Record<string, unknown> }) {
+function ResponseViewer({
+  responses = {},
+  getFieldLabel,
+}: {
+  responses?: Record<string, unknown>;
+  getFieldLabel: (fieldId: string) => string;
+}) {
   return (
     <div className="space-y-4">
-      {Object.entries(responses).map(([key, val]) => (
-        <div key={key} className="space-y-1.5">
-          <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-extrabold">{key}</p>
-          <div className="text-sm text-zinc-200 bg-zinc-950 border border-zinc-900 rounded-xl p-4 leading-relaxed whitespace-pre-wrap">
-            {Array.isArray(val) ? val.join(", ") : String(val ?? "—")}
+      {Object.entries(responses).map(([key, val]) => {
+        const valStr = Array.isArray(val) ? val.join(", ") : String(val ?? "—");
+        const isUrl = valStr.startsWith("http://") || valStr.startsWith("https://");
+        
+        return (
+          <div key={key} className="space-y-1.5">
+            <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-extrabold text-left">
+              {getFieldLabel(key)}
+            </p>
+            <div className="text-sm text-zinc-200 bg-zinc-950 border border-zinc-900 rounded-xl p-4 leading-relaxed text-left">
+              {isUrl ? (
+                <a
+                  href={valStr}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-teal-400 hover:text-teal-350 underline font-bold"
+                >
+                  {valStr}
+                </a>
+              ) : (
+                <span className="whitespace-pre-wrap">{valStr}</span>
+              )}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
+
+const DEPT_RUBRICS: Record<string, string[]> = {
+  development: ["Coding", "System Design", "Communication", "Problem Solving"],
+  "competitive-coding": ["Speed", "Accuracy", "Logic"],
+  "ui-ux": ["Visual Aesthetics", "Wireframing", "Figma Skills", "Research"],
+  "ai-ml": ["Math & Stats", "Python Libraries", "ML Concepts"],
+  "cyber-security": ["Hacking Skills", "Networking", "Linux", "Logic"],
+  design: ["Creativity", "Visual Aesthetics", "Tools", "Portfolio"],
+  management: ["Leadership", "Event Planning", "Teamwork", "Case Study"],
+  entrepreneurship: ["Business Acumen", "Pitching", "Idea Validation"],
+  "content-media": ["Writing", "Video Editing", "Camera Work", "Communication"],
+};
+const DEFAULT_RUBRIC = ["Technical", "Communication", "Creativity"];
 
 function PrefPanel({
   progress,
@@ -93,42 +158,66 @@ function PrefPanel({
   onActionTrigger,
   acting,
   totalStages,
+  overallStatus,
+  deptStages,
 }: {
   progress: PrefProgress;
   deptSlug: string;
   label: string;
-  onActionTrigger: (preference: "first" | "second", action: "advance" | "reject", note: string, scores?: Record<string, number>) => void;
+  onActionTrigger: (preference: "first" | "second", action: "advance" | "reject" | "score", note: string, scores?: Record<string, number>) => void;
   acting: boolean;
   totalStages: number;
+  overallStatus: string;
+  deptStages?: StageConfig[];
 }) {
   const prefKey = label === "1st Preference" ? "first" : "second";
   const [note, setNote] = useState("");
-  const [scores, setScores] = useState<Record<string, number>>({ technical: 0, communication: 0, creativity: 0 });
+  
+  // Gather all form fields for this department
+  const allFields = deptStages?.flatMap((s) => s.formFields) || [];
+  
+  // Find the label for a field ID
+  const getFieldLabel = (fieldId: string) => {
+    const field = allFields.find((f) => f.id === fieldId);
+    return field ? field.label : fieldId;
+  };
+
+  const rubricList = DEPT_RUBRICS[deptSlug] || DEFAULT_RUBRIC;
+  const [scores, setScores] = useState<Record<string, number>>({});
   const [expandedStage, setExpandedStage] = useState<number | null>(null);
+
+  useEffect(() => {
+    const initialScores: Record<string, number> = {};
+    rubricList.forEach((metric) => {
+      initialScores[metric.toLowerCase()] = 0;
+    });
+    setScores(initialScores);
+  }, [deptSlug]);
 
   const currentStageSubmission = progress.stages.find(
     (s) => s.stage === progress.currentStage
   );
   const canAct =
     progress.status === "active" &&
+    overallStatus === "in-progress" &&
     currentStageSubmission &&
     currentStageSubmission.result === "pending";
 
   // Build timeline steps
   const timelineSteps = [];
 
-  // Step 1: Initial submission (always completed if progress exists)
+  // Step 1: Initial application start
   timelineSteps.push({
-    stageNum: 1,
-    title: "Application Submitted",
-    description: "Candidate submitted initial form",
+    stageNum: 0,
+    title: "Application Started",
+    description: "Candidate initiated application",
     state: "passed" as const,
-    date: progress.stages.find((s) => s.stage === 1)?.submittedAt || null,
+    date: null, // we don't have this date directly in PrefProgress easily without passing it down
   });
 
-  // Steps 2 to totalStages + 1: Evaluation stages
+  // Steps 1 to totalStages: Evaluation stages
   for (let s = 1; s <= totalStages; s++) {
-    const stageDbNum = s + 1; // stage 2 in db corresponds to Stage 1 review
+    const stageDbNum = s;
     const submission = progress.stages.find((x) => x.stage === stageDbNum);
 
     let state: "passed" | "failed" | "pending" | "upcoming" = "upcoming";
@@ -142,10 +231,23 @@ function PrefPanel({
       state = "passed";
     }
 
+    let stageTitle = `Stage ${s} Evaluation`;
+    let stageDesc = submission?.result === "pending" ? "Awaiting review" : `Stage ${s} review complete`;
+    if (stageDbNum === 1) {
+      stageTitle = "Stage 1: Domain Evaluation";
+      stageDesc = submission?.result === "pending" ? "Awaiting Domain screening" : "Domain screening complete";
+    } else if (stageDbNum === 2) {
+      stageTitle = "Stage 2: Task Evaluation";
+      stageDesc = submission?.result === "pending" ? "Awaiting Task evaluation" : "Task evaluation complete";
+    } else if (stageDbNum === 3) {
+      stageTitle = "Stage 3: Interview Evaluation";
+      stageDesc = submission?.result === "pending" ? "Awaiting Interview grading" : "Interview grading complete";
+    }
+
     timelineSteps.push({
       stageNum: stageDbNum,
-      title: `Stage ${s} Evaluation`,
-      description: submission?.result === "pending" ? "Awaiting review" : `Stage ${s} review complete`,
+      title: stageTitle,
+      description: stageDesc,
       state,
       submission,
       date: submission?.submittedAt || null,
@@ -196,7 +298,7 @@ function PrefPanel({
         <div className="space-y-6 relative pl-4 before:absolute before:left-[27px] before:top-2 before:bottom-2 before:w-0.5 before:bg-zinc-900">
           {timelineSteps.map((step, idx) => {
             const isLast = idx === timelineSteps.length - 1;
-            const hasDetail = step.submission && step.stageNum > 1;
+            const hasDetail = step.submission && step.stageNum > 0;
             const isExpanded = expandedStage === step.stageNum;
 
             return (
@@ -265,18 +367,66 @@ function PrefPanel({
                 {/* Expanded Stage submission info */}
                 {isExpanded && step.submission && (
                   <div className="border border-zinc-900 rounded-xl bg-zinc-950/40 p-4 space-y-4 mt-2 animate-pixel-slide-up">
-                    <ResponseViewer responses={step.submission.responses} />
+                    <ResponseViewer responses={step.submission.responses} getFieldLabel={getFieldLabel} />
 
                     {step.submission.scores && Object.keys(step.submission.scores).length > 0 && (
-                      <div className="p-3 rounded-xl bg-teal-500/5 border border-teal-500/10 flex items-center gap-4 flex-wrap">
-                        <Award className="h-4 w-4 text-teal-400 shrink-0" />
-                        <div className="flex gap-4 flex-wrap">
+                      <div className="p-3.5 rounded-xl bg-teal-500/5 border border-teal-500/10 flex flex-col gap-2">
+                        <div className="flex items-center gap-2">
+                          <Award className="h-4 w-4 text-teal-400 shrink-0" />
+                          <span className="text-[10px] text-teal-450 uppercase font-extrabold tracking-wider">Scorecard Results</span>
+                        </div>
+                        <div className="flex gap-4 flex-wrap pt-1 border-b border-zinc-900 pb-2">
                           {Object.entries(step.submission.scores).map(([metric, score]) => (
                             <div key={metric} className="text-xs font-bold text-white">
                               <span className="text-zinc-500 capitalize">{metric}:</span> {score}/5
                             </div>
                           ))}
                         </div>
+                        {(() => {
+                          const entries = Object.values(step.submission.scores);
+                          const total = entries.reduce((acc, curr) => acc + Number(curr), 0);
+                          const maxPossible = entries.length * 5;
+                          const pct = maxPossible > 0 ? Math.round((total / maxPossible) * 100) : 0;
+                          
+                          let grade = "Weak";
+                          let color = "text-rose-455 font-bold";
+                          if (pct >= 85) { grade = "Excellent"; color = "text-teal-400 font-extrabold"; }
+                          else if (pct >= 70) { grade = "Strong"; color = "text-emerald-400 font-bold"; }
+                          else if (pct >= 50) { grade = "Average"; color = "text-amber-400 font-bold"; }
+
+                          return (
+                            <div className="flex justify-between items-center text-xs font-bold text-zinc-450 pt-1">
+                              <span>Total Score: <span className="text-white">{total}/{maxPossible} ({pct}%)</span></span>
+                              <span>Evaluation: <span className={color}>{grade}</span></span>
+                            </div>
+                          );
+                        })()}
+                        {/* Panelist Breakdown */}
+                        {step.submission.panelistScores && step.submission.panelistScores.length > 0 && (
+                          <div className="space-y-2 mt-2 pt-2 border-t border-zinc-900/60">
+                            <p className="text-[10px] text-zinc-550 font-extrabold uppercase tracking-wider">Panelist Breakdown</p>
+                            <div className="space-y-2 font-mono">
+                              {step.submission.panelistScores.map((ps: any, pIdx: number) => (
+                                <div key={pIdx} className="bg-zinc-950/60 p-2.5 border border-zinc-900 rounded-xl flex flex-col gap-1.5 text-[11px] text-zinc-350">
+                                  <div className="flex justify-between items-center text-[10px]">
+                                    <span className="text-teal-400 font-bold">{ps.interviewerEmail}</span>
+                                    <span className="text-zinc-650">{new Date(ps.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short" })}</span>
+                                  </div>
+                                  <div className="flex gap-3 flex-wrap">
+                                    {Object.entries(ps.scores || {}).map(([metric, score]) => (
+                                      <div key={metric}>
+                                        <span className="text-zinc-500 capitalize">{metric}:</span> <strong className="text-white">{score as number}/5</strong>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  {ps.note && (
+                                    <p className="text-[10px] text-zinc-500 font-sans italic">“{ps.note}”</p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -301,9 +451,9 @@ function PrefPanel({
         {/* Action Panel */}
         {canAct && (
           <div className="border-t border-zinc-900 pt-6 space-y-4">
-            <Badge variant="warning" className="uppercase font-bold tracking-wider text-[10px]">
-              Reviewing Stage {progress.currentStage - 1} Submission
-            </Badge>
+              <Badge variant="warning" className="uppercase font-bold tracking-wider text-[10px]">
+                Reviewing Stage {progress.currentStage} Submission
+              </Badge>
 
             <div className="space-y-1.5">
               <label className="text-[10px] text-zinc-500 uppercase tracking-widest font-extrabold block">
@@ -322,7 +472,7 @@ function PrefPanel({
               <p className="text-[10px] font-extrabold text-zinc-400 uppercase tracking-wider">
                 Grading Rubric (Required to Advance)
               </p>
-              {["Technical", "Communication", "Creativity"].map((metric) => {
+              {rubricList.map((metric) => {
                 const key = metric.toLowerCase();
                 return (
                   <div key={metric} className="flex items-center justify-between flex-wrap gap-2">
@@ -336,7 +486,7 @@ function PrefPanel({
                           className={`h-8 w-8 rounded-lg text-xs font-extrabold transition-all cursor-pointer ${
                             scores[key] === val
                               ? "bg-teal-500 text-slate-950 shadow-[0_0_10px_rgba(20,184,166,0.3)]"
-                              : "bg-zinc-900 border border-zinc-800 text-zinc-400 hover:bg-zinc-800 hover:text-white"
+                              : "bg-zinc-900 border border-zinc-800 text-zinc-400 hover:bg-zinc-900 hover:text-white"
                           }`}
                         >
                           {val}
@@ -348,15 +498,32 @@ function PrefPanel({
               })}
             </div>
 
-            <div className="flex gap-3 pt-2">
+            <div className="flex gap-3 pt-2 flex-wrap sm:flex-nowrap">
               <Button
                 variant="destructive"
                 onClick={() => onActionTrigger(prefKey, "reject", note)}
                 disabled={acting}
-                className="flex-1 font-bold h-11"
+                className="flex-1 font-bold h-11 cursor-pointer"
               >
                 Reject Candidate
               </Button>
+              
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  if (Object.values(scores).some((s) => s === 0)) {
+                    alert("Please grade all Rubric criteria (1-5) to save scores.");
+                    return;
+                  }
+                  onActionTrigger(prefKey, "score", note, scores);
+                }}
+                disabled={acting}
+                className="flex-1 font-bold h-11 text-teal-400 border-teal-500/30 hover:bg-teal-500/10 cursor-pointer"
+              >
+                Save Scores Only
+              </Button>
+
               <Button
                 variant="emerald"
                 onClick={() => {
@@ -367,7 +534,7 @@ function PrefPanel({
                   onActionTrigger(prefKey, "advance", note, scores);
                 }}
                 disabled={acting}
-                className="flex-1 font-bold h-11"
+                className="flex-1 font-bold h-11 cursor-pointer"
               >
                 Advance Stage
               </Button>
@@ -397,7 +564,7 @@ export default function ApplicantDetailPage({
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     preference: "first" | "second";
-    action: "advance" | "reject";
+    action: "advance" | "reject" | "score";
     note: string;
     scores?: Record<string, number>;
   } | null>(null);
@@ -431,16 +598,36 @@ export default function ApplicantDetailPage({
     };
   }, [id]);
 
-  const handleActionConfirmTrigger = (
+  const handleActionConfirmTrigger = async (
     preference: "first" | "second",
-    action: "advance" | "reject",
+    action: "advance" | "reject" | "score",
     note: string,
     scores?: Record<string, number>
   ) => {
+    if (action === "score") {
+      setActing(true);
+      setMessage("");
+      try {
+        const res = await fetch(`/api/admin/applications/${id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action, preference, note, scores }),
+        });
+        const data = await res.json();
+        setMessage(data.success ? data.message : data.error ?? "Action failed.");
+        if (data.success) await load();
+      } catch {
+        setMessage("Network communication failure.");
+      } finally {
+        setActing(false);
+      }
+      return;
+    }
+
     setConfirmDialog({
       isOpen: true,
       preference,
-      action,
+      action: action as "advance" | "reject",
       note,
       scores,
     });
@@ -470,7 +657,7 @@ export default function ApplicantDetailPage({
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-[100dvh] bg-black flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-10 w-10 text-teal-400 animate-spin" />
           <p className="text-sm text-zinc-400 font-medium">Loading details...</p>
@@ -481,7 +668,7 @@ export default function ApplicantDetailPage({
 
   if (!application) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-[100dvh] bg-black flex items-center justify-center">
         <Card className="max-w-xs text-center p-6 border-zinc-900 space-y-4 bg-zinc-950">
           <AlertTriangle className="h-12 w-12 text-amber-500 mx-auto" />
           <h2 className="text-lg font-bold text-white">Application Not Found</h2>
@@ -508,12 +695,14 @@ export default function ApplicantDetailPage({
         {/* Header */}
         <div className="flex items-center gap-4 flex-wrap">
           <div className="h-12 w-12 rounded-full bg-zinc-950 border border-zinc-900 flex items-center justify-center text-lg font-bold text-teal-400">
-            {application.userEmail.charAt(0).toUpperCase()}
+            {(application.userName || application.userEmail).charAt(0).toUpperCase()}
           </div>
           <div>
-            <h1 className="text-2xl font-extrabold text-white tracking-tight">{application.userEmail}</h1>
+            <h1 className="text-2xl font-extrabold text-white tracking-tight">
+              {application.userName || application.userEmail}
+            </h1>
             <p className="text-xs text-zinc-500 mt-1">
-              Registered on{" "}
+              {application.userName ? `${application.userEmail} · ` : ""}Registered on{" "}
               {new Date(application.createdAt).toLocaleDateString("en-IN", {
                 day: "2-digit",
                 month: "long",
@@ -552,10 +741,7 @@ export default function ApplicantDetailPage({
 
         {/* Personal Info Card */}
         {(() => {
-          const personalInfoStage =
-            application.firstPrefProgress.stages.find((s) => s.stage === 1) ||
-            application.secondPrefProgress.stages.find((s) => s.stage === 1);
-          if (!personalInfoStage) return null;
+          if (!application.fullName) return null;
 
           return (
             <Card>
@@ -567,38 +753,38 @@ export default function ApplicantDetailPage({
                 <div>
                   <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-extrabold">Full Name</p>
                   <p className="text-sm font-semibold text-zinc-200 mt-1.5">
-                    {String(personalInfoStage.responses.fullName || "—")}
+                    {application.fullName || "—"}
                   </p>
                 </div>
                 <div>
                   <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-extrabold">Phone Number</p>
                   <p className="text-sm font-semibold text-zinc-200 mt-1.5">
-                    {String(personalInfoStage.responses.phone || "—")}
+                    {application.phone || "—"}
                   </p>
                 </div>
                 <div>
                   <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-extrabold">Registration No</p>
                   <p className="text-sm font-semibold text-zinc-200 mt-1.5">
-                    {String(personalInfoStage.responses.regNo || "—")}
+                    {application.regNo || "—"}
                   </p>
                 </div>
                 <div>
                   <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-extrabold">Year of Study</p>
                   <p className="text-sm font-semibold text-zinc-200 mt-1.5">
-                    {String(personalInfoStage.responses.year || "—")}
+                    {application.year || "—"}
                   </p>
                 </div>
                 <div className="md:col-span-2">
                   <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-extrabold">Branch / Program</p>
                   <p className="text-sm font-semibold text-zinc-200 mt-1.5">
-                    {String(personalInfoStage.responses.branch || "—")}
+                    {application.branch || "—"}
                   </p>
                 </div>
-                {!!personalInfoStage.responses.whyMic && (
+                {!!application.whyMic && (
                   <div className="md:col-span-2 lg:col-span-3">
                     <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-extrabold">Why MIC?</p>
                     <p className="text-sm text-zinc-300 mt-2 leading-relaxed bg-black border border-zinc-900 p-4 rounded-xl">
-                      {String(personalInfoStage.responses.whyMic)}
+                      {application.whyMic}
                     </p>
                   </div>
                 )}
@@ -616,6 +802,8 @@ export default function ApplicantDetailPage({
             onActionTrigger={handleActionConfirmTrigger}
             acting={acting}
             totalStages={dept1?.totalStages ?? 2}
+            overallStatus={application.overallStatus}
+            deptStages={dept1?.stages}
           />
           {application.secondPreference ? (
             <PrefPanel
@@ -625,6 +813,8 @@ export default function ApplicantDetailPage({
               onActionTrigger={handleActionConfirmTrigger}
               acting={acting}
               totalStages={dept2?.totalStages ?? 2}
+              overallStatus={application.overallStatus}
+              deptStages={dept2?.stages}
             />
           ) : (
             <Card className="flex items-center justify-center p-8 border-dashed border-zinc-900">

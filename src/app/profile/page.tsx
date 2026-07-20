@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSession, signOut, SessionProvider } from "next-auth/react";
 import { Loader2, ArrowLeft, CheckCircle2, XCircle, Clock, FileText, LogOut } from "lucide-react";
 import { Press_Start_2P } from "next/font/google";
+import BackButton from "@/components/BackButton";
 
 const pressStart = Press_Start_2P({
   weight: "400",
@@ -21,6 +22,12 @@ interface StageProgress {
 }
 
 interface ApplicationStatus {
+  fullName: string;
+  phone: string;
+  regNo: string;
+  year: string;
+  branch: string;
+  whyMic: string;
   overallStatus: "in-progress" | "selected" | "rejected" | "waitlisted";
   firstPreference: string;
   secondPreference?: string;
@@ -70,7 +77,7 @@ function ProfilePage() {
 
   if (loading || status === "loading") {
     return (
-      <div className={`min-h-screen bg-[#1188EE] flex items-center justify-center ${pressStart.variable} font-press-start`}>
+      <div className={`min-h-[100dvh] bg-[#1188EE] flex items-center justify-center ${pressStart.variable} font-press-start`}>
         <div className="bg-[#B87B21] border-4 border-black p-6 flex items-center justify-center" style={{ boxShadow: "6px 6px 0px 0px #000" }}>
           <div className="text-white text-[14px] animate-retro-blink uppercase tracking-widest drop-shadow-[2px_2px_0px_#000]">
             LOADING GEAR...
@@ -82,9 +89,10 @@ function ProfilePage() {
 
   if (!appStatus) {
     return (
-      <div className={`min-h-screen bg-[#1188EE] flex flex-col ${pressStart.variable} font-press-start`}>
+      <div className={`min-h-[100dvh] bg-[#1188EE] pb-20 ${pressStart.variable} font-press-start`}>
+        <BackButton onClick={() => router.push("/recruitments")} />
         <div className="flex justify-end p-6 md:px-8 max-w-4xl mx-auto w-full">
-          <button onClick={() => signOut({ callbackUrl: "/login" })} className="flex items-center gap-2 bg-[#A93710] hover:bg-[#E29A2B] text-white px-4 py-2 border-4 border-black text-[10px] sm:text-[12px] uppercase tracking-widest transition-transform hover:-translate-y-1 active:translate-y-0" style={{ boxShadow: "4px 4px 0px 0px #000" }}>
+          <button onClick={() => signOut({ callbackUrl: "/" })} className="flex items-center gap-2 bg-[#A93710] hover:bg-[#E29A2B] text-white px-4 py-2 border-4 border-black text-[10px] sm:text-[12px] uppercase tracking-widest transition-transform hover:-translate-y-1 active:translate-y-0" style={{ boxShadow: "4px 4px 0px 0px #000" }}>
             <LogOut className="h-4 w-4" /> SIGN OUT
           </button>
         </div>
@@ -113,8 +121,7 @@ function ProfilePage() {
     prefStatus: string,
     stages: StageProgress[]
   ) => {
-    // Filter out Personal Information stage (stage 1) from the timeline
-    const timelineStages = stages.filter((s) => s.stage > 1);
+    const timelineStages = stages;
 
     return (
       <div className="bg-[#FFF4E6] border-4 border-black p-6 md:p-8 space-y-8" style={{ boxShadow: "6px 6px 0px 0px #000" }}>
@@ -145,7 +152,7 @@ function ProfilePage() {
               
               <div className="bg-white border-4 border-black p-4" style={{ boxShadow: "4px 4px 0px 0px #000" }}>
                 <div className="flex flex-col gap-2 mb-4">
-                  <h3 className="text-[12px] font-bold text-black uppercase tracking-widest">Stage {stage.stage - 1} Submitted</h3>
+                  <h3 className="text-[12px] font-bold text-black uppercase tracking-widest">Stage {stage.stage} Submitted</h3>
                   <span className="text-[10px] text-black/60 font-semibold uppercase tracking-widest">
                     {new Date(stage.submittedAt).toLocaleDateString()}
                   </span>
@@ -176,9 +183,10 @@ function ProfilePage() {
   };
 
   return (
-    <div className={`min-h-screen bg-[linear-gradient(180deg,#1188EE_0%,#0E8AEA_25%,#1093EB_35%,#1197EC_46%,#16B6F4_52%,#10CBF1_56%,#0FC6F1_60%,#15DEF0_65%,#15DEF0_81%)] flex flex-col ${pressStart.variable} font-press-start pb-20`}>
+    <div className={`min-h-[100dvh] bg-[linear-gradient(180deg,#1188EE_0%,#0E8AEA_25%,#1093EB_35%,#1197EC_46%,#16B6F4_52%,#10CBF1_56%,#0FC6F1_60%,#15DEF0_65%,#15DEF0_81%)] flex flex-col ${pressStart.variable} font-press-start pb-20`}>
+      <BackButton onClick={() => router.push("/recruitments")} />
       <div className="flex justify-end p-6 md:px-8 max-w-[1200px] mx-auto w-full">
-        <button onClick={() => signOut({ callbackUrl: "/login" })} className="flex items-center gap-2 bg-[#A93710] hover:bg-[#E29A2B] text-white px-4 py-2 border-4 border-black text-[10px] sm:text-[12px] uppercase tracking-widest transition-transform hover:-translate-y-1 active:translate-y-0" style={{ boxShadow: "4px 4px 0px 0px #000" }}>
+        <button onClick={() => signOut({ callbackUrl: "/" })} className="flex items-center gap-2 bg-[#A93710] hover:bg-[#E29A2B] text-white px-4 py-2 border-4 border-black text-[10px] sm:text-[12px] uppercase tracking-widest transition-transform hover:-translate-y-1 active:translate-y-0" style={{ boxShadow: "4px 4px 0px 0px #000" }}>
           <LogOut className="h-4 w-4" /> SIGN OUT
         </button>
       </div>
@@ -209,60 +217,51 @@ function ProfilePage() {
         </div>
 
         {/* Personal Information */}
-        {(() => {
-          const personalInfoStage = 
-            appStatus.firstPrefProgress.stages.find((s) => s.stage === 1) ||
-            appStatus.secondPrefProgress?.stages.find((s) => s.stage === 1);
-          if (!personalInfoStage) return null;
-          
-          return (
-            <div className="bg-white border-4 border-black p-6 md:p-8 space-y-6" style={{ boxShadow: "8px 8px 0px 0px #000" }}>
-              <h2 className="text-[14px] sm:text-[16px] font-black text-black uppercase tracking-widest border-b-4 border-black pb-4">
-                Personal Information
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 font-sans">
-                <div className="space-y-1">
-                  <p className="text-[9px] font-press-start text-black/60 uppercase tracking-wider">Full Name</p>
-                  <p className="text-sm font-bold text-black border-2 border-black bg-[#FFF4E6] p-3 rounded" style={{ boxShadow: "2px 2px 0px 0px #000" }}>
-                    {String(personalInfoStage.responses.fullName || "—")}
-                  </p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[9px] font-press-start text-black/60 uppercase tracking-wider">Phone Number</p>
-                  <p className="text-sm font-bold text-black border-2 border-black bg-[#FFF4E6] p-3 rounded" style={{ boxShadow: "2px 2px 0px 0px #000" }}>
-                    {String(personalInfoStage.responses.phone || "—")}
-                  </p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[9px] font-press-start text-black/60 uppercase tracking-wider">Registration Number</p>
-                  <p className="text-sm font-bold text-black border-2 border-black bg-[#FFF4E6] p-3 rounded" style={{ boxShadow: "2px 2px 0px 0px #000" }}>
-                    {String(personalInfoStage.responses.regNo || "—")}
-                  </p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-[9px] font-press-start text-black/60 uppercase tracking-wider">Year of Study</p>
-                  <p className="text-sm font-bold text-black border-2 border-black bg-[#FFF4E6] p-3 rounded" style={{ boxShadow: "2px 2px 0px 0px #000" }}>
-                    {String(personalInfoStage.responses.year || "—")}
-                  </p>
-                </div>
-                <div className="space-y-1 md:col-span-2 lg:col-span-2">
-                  <p className="text-[9px] font-press-start text-black/60 uppercase tracking-wider">Branch / Programme</p>
-                  <p className="text-sm font-bold text-black border-2 border-black bg-[#FFF4E6] p-3 rounded" style={{ boxShadow: "2px 2px 0px 0px #000" }}>
-                    {String(personalInfoStage.responses.branch || "—")}
-                  </p>
-                </div>
-                {personalInfoStage.responses.whyMic ? (
-                  <div className="space-y-1 md:col-span-2 lg:col-span-3">
-                    <p className="text-[9px] font-press-start text-black/60 uppercase tracking-wider">Why do you want to join MIC?</p>
-                    <p className="text-sm text-black border-2 border-black bg-[#FFF4E6] p-3 rounded leading-relaxed" style={{ boxShadow: "2px 2px 0px 0px #000" }}>
-                      {String(personalInfoStage.responses.whyMic)}
-                    </p>
-                  </div>
-                ) : null}
-              </div>
+        <div className="bg-white border-4 border-black p-6 md:p-8 space-y-6" style={{ boxShadow: "8px 8px 0px 0px #000" }}>
+          <h2 className="text-[14px] sm:text-[16px] font-black text-black uppercase tracking-widest border-b-4 border-black pb-4">
+            Personal Information
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 font-sans">
+            <div className="space-y-1">
+              <p className="text-[9px] font-press-start text-black/60 uppercase tracking-wider">Full Name</p>
+              <p className="text-sm font-bold text-black border-2 border-black bg-[#FFF4E6] p-3 rounded" style={{ boxShadow: "2px 2px 0px 0px #000" }}>
+                {appStatus.fullName || "—"}
+              </p>
             </div>
-          );
-        })()}
+            <div className="space-y-1">
+              <p className="text-[9px] font-press-start text-black/60 uppercase tracking-wider">Phone Number</p>
+              <p className="text-sm font-bold text-black border-2 border-black bg-[#FFF4E6] p-3 rounded" style={{ boxShadow: "2px 2px 0px 0px #000" }}>
+                {appStatus.phone || "—"}
+              </p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-[9px] font-press-start text-black/60 uppercase tracking-wider">Registration Number</p>
+              <p className="text-sm font-bold text-black border-2 border-black bg-[#FFF4E6] p-3 rounded" style={{ boxShadow: "2px 2px 0px 0px #000" }}>
+                {appStatus.regNo || "—"}
+              </p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-[9px] font-press-start text-black/60 uppercase tracking-wider">Year of Study</p>
+              <p className="text-sm font-bold text-black border-2 border-black bg-[#FFF4E6] p-3 rounded" style={{ boxShadow: "2px 2px 0px 0px #000" }}>
+                {appStatus.year || "—"}
+              </p>
+            </div>
+            <div className="space-y-1 md:col-span-2 lg:col-span-2">
+              <p className="text-[9px] font-press-start text-black/60 uppercase tracking-wider">Branch / Programme</p>
+              <p className="text-sm font-bold text-black border-2 border-black bg-[#FFF4E6] p-3 rounded" style={{ boxShadow: "2px 2px 0px 0px #000" }}>
+                {appStatus.branch || "—"}
+              </p>
+            </div>
+            {appStatus.whyMic ? (
+              <div className="space-y-1 md:col-span-2 lg:col-span-3">
+                <p className="text-[9px] font-press-start text-black/60 uppercase tracking-wider">Why do you want to join MIC?</p>
+                <p className="text-sm text-black border-2 border-black bg-[#FFF4E6] p-3 rounded leading-relaxed" style={{ boxShadow: "2px 2px 0px 0px #000" }}>
+                  {appStatus.whyMic}
+                </p>
+              </div>
+            ) : null}
+          </div>
+        </div>
 
         {/* Timelines */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-12">

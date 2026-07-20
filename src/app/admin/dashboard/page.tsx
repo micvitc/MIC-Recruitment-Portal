@@ -16,6 +16,9 @@ import {
 import {
   LineChart,
   Line,
+  BarChart,
+  Bar,
+  Legend,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -144,7 +147,7 @@ export default function AdminDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className="min-h-[100dvh] bg-black flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="h-10 w-10 text-teal-400 animate-spin" />
           <p className="text-sm text-zinc-400 font-medium">Loading Dashboard...</p>
@@ -170,15 +173,24 @@ export default function AdminDashboard() {
     }
   };
 
+  const departmentData = Object.keys(DEPT_NAMES).map((slug) => {
+    const first = stats?.byDepartment?.byFirst?.find((d) => d._id === slug)?.count || 0;
+    const second = stats?.byDepartment?.bySecond?.find((d) => d._id === slug)?.count || 0;
+    return { name: DEPT_NAMES[slug], First: first, Second: second };
+  }).sort((a, b) => (b.First + b.Second) - (a.First + a.Second));
+
   return (
     <AdminLayout activePage="dashboard">
-      <div className="p-8 space-y-8 max-w-7xl mx-auto w-full">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-extrabold text-white tracking-tight">Overview</h1>
-            <p className="text-sm text-zinc-450 mt-1">MIC Recruitment Cycle 2026–27</p>
-          </div>
+      <div className="relative min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-900/60 via-black to-black">
+        <div className="p-8 space-y-8 max-w-7xl mx-auto w-full relative z-10">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-teal-400 to-emerald-400 bg-clip-text text-transparent">
+                Overview
+              </h1>
+              <p className="text-sm text-zinc-400 mt-1 font-medium">MIC Recruitment Cycle 2026–27</p>
+            </div>
           <div className="flex items-center gap-3">
             <Button
               variant="outline"
@@ -207,139 +219,185 @@ export default function AdminDashboard() {
 
         {/* Stat Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card>
+          <Card className="hover:-translate-y-1 hover:shadow-2xl hover:shadow-teal-900/20 transition-all duration-300 border-zinc-800/60">
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-xs font-extrabold uppercase tracking-wider text-zinc-500">
+              <CardTitle className="text-xs font-extrabold uppercase tracking-wider text-zinc-400">
                 Total Applicants
               </CardTitle>
-              <div className="p-2 rounded-xl bg-teal-500/10 text-teal-400">
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-teal-500/20 to-teal-500/5 text-teal-400 border border-teal-500/10">
                 <Users className="h-4 w-4" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-extrabold text-white">{stats?.total ?? 0}</div>
-              <p className="text-xs text-zinc-500 mt-1">Submissions in current cycle</p>
+              <div className="text-4xl font-extrabold text-white">{stats?.total ?? 0}</div>
+              <p className="text-xs text-zinc-500 mt-2 font-medium">Submissions in current cycle</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="hover:-translate-y-1 hover:shadow-2xl hover:shadow-amber-900/20 transition-all duration-300 border-zinc-800/60">
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-xs font-extrabold uppercase tracking-wider text-zinc-500">
+              <CardTitle className="text-xs font-extrabold uppercase tracking-wider text-zinc-400">
                 In Progress
               </CardTitle>
-              <div className="p-2 rounded-xl bg-amber-500/10 text-amber-400">
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-500/5 text-amber-400 border border-amber-500/10">
                 <Clock className="h-4 w-4" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-extrabold text-white">{stats?.inProgress ?? 0}</div>
-              <p className="text-xs text-zinc-500 mt-1">Currently being reviewed</p>
+              <div className="text-4xl font-extrabold text-white">{stats?.inProgress ?? 0}</div>
+              <p className="text-xs text-zinc-500 mt-2 font-medium">Currently being reviewed</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="hover:-translate-y-1 hover:shadow-2xl hover:shadow-emerald-900/20 transition-all duration-300 border-zinc-800/60">
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-xs font-extrabold uppercase tracking-wider text-zinc-500">
+              <CardTitle className="text-xs font-extrabold uppercase tracking-wider text-zinc-400">
                 Selected
               </CardTitle>
-              <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-400">
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/5 text-emerald-400 border border-emerald-500/10">
                 <CheckCircle2 className="h-4 w-4" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-extrabold text-white">{stats?.selected ?? 0}</div>
-              <p className="text-xs text-zinc-500 mt-1">Accepted into MIC</p>
+              <div className="text-4xl font-extrabold text-white">{stats?.selected ?? 0}</div>
+              <p className="text-xs text-zinc-500 mt-2 font-medium">Accepted into MIC</p>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="hover:-translate-y-1 hover:shadow-2xl hover:shadow-violet-900/20 transition-all duration-300 border-zinc-800/60">
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-              <CardTitle className="text-xs font-extrabold uppercase tracking-wider text-zinc-500">
+              <CardTitle className="text-xs font-extrabold uppercase tracking-wider text-zinc-400">
                 Conversion Rate
               </CardTitle>
-              <div className="p-2 rounded-xl bg-violet-500/10 text-violet-400">
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-violet-500/20 to-violet-500/5 text-violet-400 border border-violet-500/10">
                 <TrendingUp className="h-4 w-4" />
               </div>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-extrabold text-white">{stats?.conversionRate ?? "0"}%</div>
-              <p className="text-xs text-zinc-500 mt-1">{stats?.rejected ?? 0} applications rejected</p>
+              <div className="text-4xl font-extrabold text-white">{stats?.conversionRate ?? "0"}%</div>
+              <p className="text-xs text-zinc-500 mt-2 font-medium">{stats?.rejected ?? 0} applications rejected</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Basic Analytics: Daily Applications Chart */}
+        {/* Basic Analytics & Department Breakdown */}
         {stats && (
-          <Card className="w-full">
-            <CardHeader>
-              <CardTitle className="text-base font-bold">Daily Application Flow</CardTitle>
-              <CardDescription>Submissions received over calendar days</CardDescription>
-            </CardHeader>
-            <CardContent className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={stats.dailyApplications} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#18181b" vertical={false} />
-                  <XAxis
-                    dataKey="_id"
-                    stroke="#52525b"
-                    fontSize={11}
-                    tickLine={false}
-                    tickFormatter={(val) =>
-                      new Date(val).toLocaleDateString(undefined, { month: "short", day: "numeric" })
-                    }
-                  />
-                  <YAxis stroke="#52525b" fontSize={11} tickLine={false} allowDecimals={false} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: "#09090b", borderColor: "#27272a" }}
-                    itemStyle={{ color: "#2dd4bf" }}
-                    labelStyle={{ color: "#a1a1aa" }}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="applications"
-                    name="Submissions"
-                    stroke="#2dd4bf"
-                    strokeWidth={3}
-                    dot={{ r: 4, fill: "#2dd4bf", strokeWidth: 0 }}
-                    activeDot={{ r: 6 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Daily Application Flow */}
+            <Card className="border-zinc-800/60 bg-zinc-950/40 backdrop-blur-md">
+              <CardHeader>
+                <CardTitle className="text-base font-bold text-white">Daily Application Flow</CardTitle>
+                <CardDescription className="text-zinc-400">Submissions received over calendar days</CardDescription>
+              </CardHeader>
+              <CardContent className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={stats.dailyApplications} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+                    <XAxis
+                      dataKey="_id"
+                      stroke="#71717a"
+                      fontSize={11}
+                      tickLine={false}
+                      tickFormatter={(val) =>
+                        new Date(val).toLocaleDateString(undefined, { month: "short", day: "numeric" })
+                      }
+                    />
+                    <YAxis stroke="#71717a" fontSize={11} tickLine={false} allowDecimals={false} />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: "rgba(9, 9, 11, 0.8)", borderColor: "#27272a", borderRadius: "12px", backdropFilter: "blur(8px)" }}
+                      itemStyle={{ color: "#2dd4bf" }}
+                      labelStyle={{ color: "#a1a1aa", fontWeight: "bold", marginBottom: "4px" }}
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="applications"
+                      name="Submissions"
+                      stroke="url(#colorUv)"
+                      strokeWidth={3}
+                      dot={{ r: 4, fill: "#2dd4bf", strokeWidth: 0 }}
+                      activeDot={{ r: 6, fill: "#34d399", strokeWidth: 0 }}
+                    />
+                    <defs>
+                      <linearGradient id="colorUv" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset="0%" stopColor="#2dd4bf" />
+                        <stop offset="100%" stopColor="#34d399" />
+                      </linearGradient>
+                    </defs>
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            {/* Department Breakdown */}
+            <Card className="border-zinc-800/60 bg-zinc-950/40 backdrop-blur-md">
+              <CardHeader>
+                <CardTitle className="text-base font-bold text-white">Department Demand</CardTitle>
+                <CardDescription className="text-zinc-400">Applicants per department (First & Second Preference)</CardDescription>
+              </CardHeader>
+              <CardContent className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={departmentData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#27272a" vertical={false} />
+                    <XAxis
+                      dataKey="name"
+                      stroke="#71717a"
+                      fontSize={11}
+                      tickLine={false}
+                      tickFormatter={(val) => (val.length > 10 ? val.substring(0, 10) + "..." : val)}
+                    />
+                    <YAxis stroke="#71717a" fontSize={11} tickLine={false} allowDecimals={false} />
+                    <Tooltip
+                      cursor={{ fill: "#27272a", opacity: 0.4 }}
+                      contentStyle={{ backgroundColor: "rgba(9, 9, 11, 0.8)", borderColor: "#27272a", borderRadius: "12px", backdropFilter: "blur(8px)" }}
+                      itemStyle={{ color: "#fff", fontWeight: "bold" }}
+                      labelStyle={{ color: "#a1a1aa", fontWeight: "bold", marginBottom: "4px" }}
+                    />
+                    <Legend iconType="circle" wrapperStyle={{ fontSize: "12px", paddingTop: "10px" }} />
+                    <Bar dataKey="First" stackId="a" fill="#2dd4bf" radius={[0, 0, 4, 4]} />
+                    <Bar dataKey="Second" stackId="a" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
         )}
 
         {/* Lower Grid: Activity & Audit Feed + Quick Actions */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-10">
           {/* Tabbed Activity Feed & Audit logs */}
-          <Card>
+          <Card className="border-zinc-800/60 bg-zinc-950/40 backdrop-blur-md">
             <CardHeader className="pb-0">
-              <CardTitle className="text-base font-bold">Activity Tracking</CardTitle>
-              <CardDescription>Monitor live candidates and administrative operations</CardDescription>
+              <CardTitle className="text-base font-bold text-white">Activity Tracking</CardTitle>
+              <CardDescription className="text-zinc-400">Monitor live candidates and administrative operations</CardDescription>
             </CardHeader>
             <CardContent className="pt-4">
               <Tabs defaultValue="activity" className="w-full">
-                <TabsList className="grid grid-cols-2 w-full mb-4">
-                  <TabsTrigger value="activity">Recent Activity</TabsTrigger>
-                  <TabsTrigger value="audit">Admin Audit Logs</TabsTrigger>
+                <TabsList className="grid grid-cols-2 w-full mb-4 bg-zinc-900/50">
+                  <TabsTrigger value="activity" className="data-[state=active]:bg-zinc-800 data-[state=active]:text-white">Recent Activity</TabsTrigger>
+                  <TabsTrigger value="audit" className="data-[state=active]:bg-zinc-800 data-[state=active]:text-white">Admin Audit Logs</TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="activity" className="space-y-4">
                   {(stats?.recentActivity ?? []).length === 0 ? (
-                    <div className="text-sm text-zinc-500 text-center py-10">No activity yet</div>
+                    <div className="text-sm text-zinc-500 text-center py-10 font-medium">No activity yet</div>
                   ) : (
-                    (stats?.recentActivity ?? []).map((item, i) => (
+                    (stats?.recentActivity ?? []).map((item, i) => {
+                      const borderColor = 
+                        item.overallStatus === "selected" ? "border-emerald-500/50" :
+                        item.overallStatus === "rejected" ? "border-red-500/50" : "border-amber-500/50";
+                      
+                      return (
                       <div
                         key={i}
                         onClick={() => router.push("/admin/applications")}
-                        className="flex items-center gap-4 p-3 rounded-xl bg-zinc-950/40 border border-zinc-900/80 hover:bg-zinc-900/40 hover:border-zinc-800 transition-all cursor-pointer"
+                        className={`flex items-center gap-4 p-3 rounded-xl bg-zinc-900/20 border-l-2 ${borderColor} border-y border-r border-y-zinc-800/40 border-r-zinc-800/40 hover:bg-zinc-800/40 hover:shadow-lg transition-all cursor-pointer`}
                       >
-                        <div className="h-8 w-8 rounded-full bg-zinc-900 flex items-center justify-center text-xs font-bold text-zinc-300 border border-zinc-800">
+                        <div className="h-9 w-9 rounded-full bg-gradient-to-br from-zinc-700 to-zinc-900 flex items-center justify-center text-xs font-bold text-white shadow-inner">
                           {item.userEmail.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-bold text-white truncate">{item.userEmail}</p>
-                          <p className="text-[10px] text-zinc-500 mt-0.5">
+                          <p className="text-sm font-bold text-zinc-200 truncate">{item.userEmail}</p>
+                          <p className="text-[11px] text-zinc-500 mt-0.5 font-medium">
                             {DEPT_NAMES[item.firstPreference] ?? item.firstPreference} →{" "}
                             {DEPT_NAMES[item.secondPreference] ?? item.secondPreference}
                           </p>
@@ -352,32 +410,33 @@ export default function AdminDashboard() {
                               ? "destructive"
                               : "warning"
                           }
+                          className="shadow-sm"
                         >
                           {item.overallStatus}
                         </Badge>
                       </div>
-                    ))
+                    )})
                   )}
                 </TabsContent>
 
                 <TabsContent value="audit" className="space-y-4">
                   {(stats?.auditLogs ?? []).length === 0 ? (
                     <div className="text-sm text-zinc-500 text-center py-10 flex flex-col items-center justify-center gap-2">
-                      <ShieldAlert className="h-8 w-8 text-zinc-650" />
-                      <span>No administrator audit logs recorded yet</span>
+                      <ShieldAlert className="h-8 w-8 text-zinc-600/50" />
+                      <span className="font-medium">No administrator audit logs recorded yet</span>
                     </div>
                   ) : (
                     (stats?.auditLogs ?? []).map((item) => (
                       <div
                         key={item._id}
-                        className="flex items-start gap-4 p-3.5 rounded-xl bg-zinc-950/40 border border-zinc-900/80 hover:border-zinc-800 transition-all text-left"
+                        className="flex items-start gap-4 p-4 rounded-xl bg-zinc-900/20 border border-zinc-800/40 hover:border-zinc-700 hover:bg-zinc-800/30 transition-all text-left group"
                       >
-                        <div className="flex-1 min-w-0 space-y-1">
-                          <div className="flex items-center justify-between flex-wrap gap-1">
-                            <span className="text-[11px] font-bold text-white truncate max-w-44">
+                        <div className="flex-1 min-w-0 space-y-2">
+                          <div className="flex items-center justify-between flex-wrap gap-2">
+                            <span className="text-xs font-bold text-zinc-200 truncate max-w-44 group-hover:text-white transition-colors">
                               {item.adminEmail}
                             </span>
-                            <span className="text-[9px] font-semibold text-zinc-500">
+                            <span className="text-[10px] font-semibold text-zinc-500 bg-zinc-950/50 px-2 py-0.5 rounded-full">
                               {new Date(item.createdAt).toLocaleTimeString(undefined, {
                                 hour: "2-digit",
                                 minute: "2-digit",
@@ -385,15 +444,15 @@ export default function AdminDashboard() {
                             </span>
                           </div>
                           <div className="flex items-center gap-2 flex-wrap">
-                            <Badge variant={getActionBadgeVariant(item.action)}>
+                            <Badge variant={getActionBadgeVariant(item.action)} className="shadow-sm">
                               {item.action.replace("_", " ")}
                             </Badge>
-                            <span className="text-[10px] font-bold text-teal-400 truncate max-w-48">
+                            <span className="text-xs font-bold text-teal-400/90 truncate max-w-48">
                               {item.target}
                             </span>
                           </div>
                           {item.details && (
-                            <p className="text-[11px] text-zinc-400 font-medium leading-relaxed">
+                            <p className="text-xs text-zinc-400 font-medium leading-relaxed bg-zinc-950/30 p-2 rounded-lg border border-zinc-800/30 mt-1">
                               {item.details}
                             </p>
                           )}
@@ -407,23 +466,23 @@ export default function AdminDashboard() {
           </Card>
 
           {/* Quick Actions */}
-          <Card>
+          <Card className="border-zinc-800/60 bg-zinc-950/40 backdrop-blur-md">
             <CardHeader>
-              <CardTitle className="text-base font-bold">Quick Actions</CardTitle>
-              <CardDescription>Shortcut workflows for recruitment admins</CardDescription>
+              <CardTitle className="text-base font-bold text-white">Quick Actions</CardTitle>
+              <CardDescription className="text-zinc-400">Shortcut workflows for recruitment admins</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-4">
               <Button
                 variant="outline"
                 onClick={() => router.push("/admin/applications")}
-                className="w-full flex items-center justify-start gap-4 p-6 rounded-xl hover:border-teal-500/30 hover:bg-teal-500/5 group text-left h-auto"
+                className="w-full flex items-center justify-start gap-5 p-6 rounded-2xl border-zinc-800/80 hover:border-teal-500/50 bg-zinc-900/20 hover:bg-teal-500/5 hover:shadow-lg hover:shadow-teal-900/10 hover:-translate-y-0.5 group text-left h-auto transition-all duration-300"
               >
-                <div className="p-2.5 rounded-xl bg-teal-500/10 text-teal-400 group-hover:bg-teal-500/20 transition-all">
-                  <Users className="h-5 w-5" />
+                <div className="p-3 rounded-xl bg-gradient-to-br from-teal-500/20 to-teal-500/5 text-teal-400 group-hover:scale-110 transition-transform duration-300 shadow-inner">
+                  <Users className="h-6 w-6" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-white">Review Submissions</p>
-                  <p className="text-xs text-zinc-400 font-medium mt-0.5">
+                  <p className="text-sm font-extrabold text-zinc-200 group-hover:text-teal-400 transition-colors">Review Submissions</p>
+                  <p className="text-xs text-zinc-500 font-medium mt-1">
                     Advance, select, or reject applicant cycles
                   </p>
                 </div>
@@ -432,15 +491,15 @@ export default function AdminDashboard() {
               <Button
                 variant="outline"
                 onClick={() => router.push("/admin/settings")}
-                className="w-full flex items-center justify-start gap-4 p-6 rounded-xl hover:border-violet-500/30 hover:bg-violet-500/5 group text-left h-auto"
+                className="w-full flex items-center justify-start gap-5 p-6 rounded-2xl border-zinc-800/80 hover:border-violet-500/50 bg-zinc-900/20 hover:bg-violet-500/5 hover:shadow-lg hover:shadow-violet-900/10 hover:-translate-y-0.5 group text-left h-auto transition-all duration-300"
               >
-                <div className="p-2.5 rounded-xl bg-violet-500/10 text-violet-400 group-hover:bg-violet-500/20 transition-all">
-                  <Compass className="h-5 w-5" />
+                <div className="p-3 rounded-xl bg-gradient-to-br from-violet-500/20 to-violet-500/5 text-violet-400 group-hover:scale-110 transition-transform duration-300 shadow-inner">
+                  <Compass className="h-6 w-6" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-white">Manage Departments</p>
-                  <p className="text-xs text-zinc-400 font-medium mt-0.5">
-                    Toggle statuses, cycle parameters, and question forms
+                  <p className="text-sm font-extrabold text-zinc-200 group-hover:text-violet-400 transition-colors">Manage Departments</p>
+                  <p className="text-xs text-zinc-500 font-medium mt-1">
+                    Toggle statuses, cycle parameters, and forms
                   </p>
                 </div>
               </Button>
@@ -448,16 +507,16 @@ export default function AdminDashboard() {
               <Button
                 variant="outline"
                 onClick={() => setShowCycleConfirm(true)}
-                className="w-full flex items-center justify-start gap-4 p-6 rounded-xl hover:border-amber-500/30 hover:bg-amber-500/5 group text-left h-auto"
+                className="w-full flex items-center justify-start gap-5 p-6 rounded-2xl border-zinc-800/80 hover:border-amber-500/50 bg-zinc-900/20 hover:bg-amber-500/5 hover:shadow-lg hover:shadow-amber-900/10 hover:-translate-y-0.5 group text-left h-auto transition-all duration-300"
               >
-                <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-400 group-hover:bg-amber-500/20 transition-all">
-                  <Zap className="h-5 w-5" />
+                <div className="p-3 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-500/5 text-amber-400 group-hover:scale-110 transition-transform duration-300 shadow-inner">
+                  <Zap className="h-6 w-6" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-white">
+                  <p className="text-sm font-extrabold text-zinc-200 group-hover:text-amber-400 transition-colors">
                     {cycle?.isOpen ? "Suspend Submissions" : "Resume Submissions"}
                   </p>
-                  <p className="text-xs text-zinc-400 font-medium mt-0.5">
+                  <p className="text-xs text-zinc-500 font-medium mt-1">
                     {cycle?.isOpen
                       ? "Temporarily close forms for new applicants"
                       : "Allow open submissions and editing forms"}
@@ -467,6 +526,7 @@ export default function AdminDashboard() {
             </CardContent>
           </Card>
         </div>
+      </div>
       </div>
 
       {/* AlertDialog to replace standard window.confirm */}
