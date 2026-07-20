@@ -662,9 +662,13 @@ export default function RecruitmentsPage() {
 
     if (isFirstPref || isSecondPref) {
       playRetroSound("select");
-      const currentStage = isFirstPref ? appStatus.firstPrefProgress.currentStage : appStatus.secondPrefProgress.currentStage;
-      posthog.capture("Quest Resume Clicked", { slug, stage: currentStage });
-      router.push(`/apply/${slug}/stage-${currentStage}`);
+      const progress = isFirstPref ? appStatus.firstPrefProgress : appStatus.secondPrefProgress;
+      // Route to the last submitted stage (so they can view/edit it while awaiting review).
+      // currentStage is now admin-controlled, so we don't use it for routing.
+      const submittedStages = progress.stages.map((s) => s.stage);
+      const targetStage = submittedStages.length > 0 ? Math.max(...submittedStages) : progress.currentStage;
+      posthog.capture("Quest Resume Clicked", { slug, stage: targetStage });
+      router.push(`/apply/${slug}/stage-${targetStage}`);
       return;
     }
 

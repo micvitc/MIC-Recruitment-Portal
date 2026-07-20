@@ -105,7 +105,26 @@ function RetroBackground({ scale }: { scale: number }) {
             <div className="w-full h-[3px] bg-[#72F418]" />
             <div className="w-full h-[3px] bg-[#3FA70E]" />
           </div>
-          <div className="w-full flex-grow bg-[#DD9955] border-b-4 border-black pt-3"></div>
+          <div className="w-full flex-grow bg-[#DD9955] border-b-4 border-black relative overflow-hidden flex items-center">
+            <div className="flex whitespace-nowrap animate-marquee">
+              <span className="inline-flex items-center shrink-0 text-[24px] text-[#CC7700] tracking-wider uppercase font-bold">
+                {Array(6).fill("MICROSOFT INNOVATIONS CLUB TENURE 2026-2027").map((text, idx) => (
+                  <React.Fragment key={idx}>
+                    <span>{text}</span>
+                    <img src="/mic_logo_pixel.png" alt="MIC" className="w-8 h-8 md:w-10 md:h-10 mx-8 shrink-0" />
+                  </React.Fragment>
+                ))}
+              </span>
+              <span className="inline-flex items-center shrink-0 text-[24px] text-[#CC7700] tracking-wider uppercase font-bold">
+                {Array(6).fill("MICROSOFT INNOVATIONS CLUB TENURE 2026-2027").map((text, idx) => (
+                  <React.Fragment key={idx}>
+                    <span>{text}</span>
+                    <img src="/mic_logo_pixel.png" alt="MIC" className="w-8 h-8 md:w-10 md:h-10 mx-8 shrink-0" />
+                  </React.Fragment>
+                ))}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -752,9 +771,14 @@ export default function StagePage({
                 playRetroSound();
                 router.push("/recruitments");
               }}
-              className="absolute right-4 top-1/2 -translate-y-1/2 bg-[#FF6F61] hover:bg-[#FF8575] active:translate-y-[calc(-50%+2px)] border-4 border-black w-8 h-8 flex items-center justify-center font-bold text-[10px] text-black z-30 cursor-pointer shadow-[2px_2px_0px_#000] transition-all"
+              className="absolute right-4 top-1/2 -translate-y-1/2 z-30 cursor-pointer hover:scale-110 active:scale-95 transition-transform duration-100 flex items-center justify-center select-none"
+              title="Close"
             >
-              X
+              <img
+                src="/Close_icon.svg"
+                alt="Close"
+                className="w-[34px] h-[32px] pixelated pointer-events-none"
+              />
             </button>
           </div>
 

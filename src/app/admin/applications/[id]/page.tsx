@@ -298,7 +298,7 @@ function PrefPanel({
         <div className="space-y-6 relative pl-4 before:absolute before:left-[27px] before:top-2 before:bottom-2 before:w-0.5 before:bg-zinc-900">
           {timelineSteps.map((step, idx) => {
             const isLast = idx === timelineSteps.length - 1;
-            const hasDetail = step.submission && step.stageNum > 1;
+            const hasDetail = step.submission && step.stageNum > 0;
             const isExpanded = expandedStage === step.stageNum;
 
             return (
