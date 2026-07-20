@@ -2,48 +2,21 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
+import { playRetroSound } from "@/lib/audio";
 
 interface BackButtonProps {
   onClick?: () => void;
 }
 
-let globalAudioCtx: AudioContext | null = null;
+
 
 export default function BackButton({ onClick }: BackButtonProps) {
   const router = useRouter();
 
-  const playRetroSound = () => {
-    if (typeof window === "undefined") return;
-    try {
-      if (!globalAudioCtx) {
-        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-        if (!AudioContextClass) return;
-        globalAudioCtx = new AudioContextClass();
-      }
-      const ctx = globalAudioCtx;
-      if (ctx.state === "suspended") {
-        ctx.resume();
-      }
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = "square";
-      osc.frequency.setValueAtTime(600, ctx.currentTime);
-      osc.frequency.setValueAtTime(900, ctx.currentTime + 0.08);
-      gain.gain.setValueAtTime(0.08, ctx.currentTime);
-      gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.2);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.2);
-    } catch (e) {
-      console.warn("Audio Context failed", e);
-    }
-  };
-
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    playRetroSound();
+    playRetroSound("select");
     if (onClick) {
       onClick();
     } else {

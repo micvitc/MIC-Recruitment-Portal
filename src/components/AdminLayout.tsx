@@ -3,9 +3,10 @@
 import React, { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { BarChart3, Users, Settings, LogOut, TrendingUp, Mail, Calendar, Activity, Gamepad2 } from "lucide-react";
+import { BarChart3, Users, Settings, LogOut, TrendingUp, Mail, Calendar, Activity, Gamepad2, PanelLeftClose, PanelLeftOpen, Building } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Press_Start_2P } from "next/font/google";
+import { playRetroSound } from "@/lib/audio";
 
 const pressStart = Press_Start_2P({
   weight: "400",
@@ -15,13 +16,14 @@ const pressStart = Press_Start_2P({
 
 interface AdminLayoutProps {
   children: React.ReactNode;
-  activePage: "dashboard" | "applications" | "settings" | "analytics" | "emails" | "interviews" | "logs" | "arcade";
+  activePage: "dashboard" | "applications" | "settings" | "analytics" | "emails" | "interviews" | "logs" | "arcade" | "departments";
 }
 
 export function AdminLayout({ children, activePage }: AdminLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [coins, setCoins] = useState(0);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   useEffect(() => {
     const loadCoins = () => {
@@ -37,55 +39,11 @@ export function AdminLayout({ children, activePage }: AdminLayoutProps) {
   }, []);
 
   const playCoinSound = () => {
-    if (typeof window === "undefined") return;
-    try {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioContextClass) return;
-      const ctx = new AudioContextClass();
-      const gain = ctx.createGain();
-      gain.connect(ctx.destination);
-      
-      const osc = ctx.createOscillator();
-      osc.type = "square";
-      osc.connect(gain);
-      
-      osc.frequency.setValueAtTime(987.77, ctx.currentTime); // B5
-      osc.frequency.setValueAtTime(1318.51, ctx.currentTime + 0.08); // E6
-      
-      gain.gain.setValueAtTime(0.04, ctx.currentTime);
-      gain.gain.setValueAtTime(0.04, ctx.currentTime + 0.08);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
-      
-      osc.start();
-      osc.stop(ctx.currentTime + 0.35);
-    } catch (e) {
-      console.warn("Audio Context failed", e);
-    }
+    playRetroSound("coin");
   };
 
   const playJumpSound = () => {
-    if (typeof window === "undefined") return;
-    try {
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioContextClass) return;
-      const ctx = new AudioContextClass();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      
-      osc.type = "triangle";
-      gain.gain.setValueAtTime(0.06, ctx.currentTime);
-      gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.25);
-      
-      osc.frequency.setValueAtTime(150, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(600, ctx.currentTime + 0.25);
-      
-      osc.start();
-      osc.stop(ctx.currentTime + 0.25);
-    } catch (e) {
-      console.warn("Audio Context failed", e);
-    }
+    playRetroSound("arcade_jump");
   };
 
   const incrementCoins = () => {
@@ -145,6 +103,12 @@ export function AdminLayout({ children, activePage }: AdminLayoutProps) {
       key: "arcade" as const,
     },
     {
+      icon: <Building className="h-4 w-4" />,
+      label: "Departments",
+      href: "/admin/departments",
+      key: "departments" as const,
+    },
+    {
       icon: <Settings className="h-4 w-4" />,
       label: "Settings",
       href: "/admin/settings",
@@ -155,20 +119,30 @@ export function AdminLayout({ children, activePage }: AdminLayoutProps) {
   return (
     <div className={`${pressStart.variable} min-h-screen bg-black text-slate-100 flex`}>
       {/* Sidebar */}
-      <aside className="fixed left-0 top-0 h-full w-56 bg-zinc-950 border-r-4 border-black flex flex-col z-20">
-        <div className="p-5 border-b-4 border-black flex items-center gap-3 bg-zinc-900/20">
-          <img
-            src="/mic_logo_pixel.png"
-            alt="MIC Logo"
-            className="pixelated w-10 h-7 select-none object-contain hover:-translate-y-1 hover:scale-105 transition-all cursor-pointer"
-            onClick={playJumpSound}
-          />
-          <div>
-            <p className="text-xs text-zinc-550 uppercase tracking-widest font-extrabold">
-              MIC Admin
-            </p>
-            <p className="text-base font-extrabold text-white mt-0.5">Portal</p>
+      <aside className={`fixed left-0 top-0 h-full w-56 bg-zinc-950 border-r-4 border-black flex flex-col z-20 transition-transform duration-300 ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"}`}>
+        <div className="p-5 border-b-4 border-black flex items-center justify-between gap-3 bg-zinc-900/20">
+          <div className="flex items-center gap-3">
+            <img
+              src="/mic_logo_pixel.png"
+              alt="MIC Logo"
+              className="pixelated w-10 h-7 select-none object-contain hover:-translate-y-1 hover:scale-105 transition-all cursor-pointer"
+              onClick={playJumpSound}
+            />
+            <div>
+              <p className="text-xs text-zinc-550 uppercase tracking-widest font-extrabold">
+                Admin
+              </p>
+              <p className="text-base font-extrabold text-white mt-0.5">Portal</p>
+            </div>
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsSidebarOpen(false)}
+            className="h-8 w-8 text-zinc-400 hover:text-white"
+          >
+            <PanelLeftClose className="h-4 w-4" />
+          </Button>
         </div>
 
         {/* Coin Counter */}
@@ -212,8 +186,20 @@ export function AdminLayout({ children, activePage }: AdminLayoutProps) {
         </div>
       </aside>
 
+      {/* Toggle Button when Sidebar is closed */}
+      {!isSidebarOpen && (
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => setIsSidebarOpen(true)}
+          className="fixed top-4 left-4 z-30 bg-zinc-950 border-2 border-zinc-800 hover:bg-zinc-900 text-white"
+        >
+          <PanelLeftOpen className="h-4 w-4" />
+        </Button>
+      )}
+
       {/* Main Content Area */}
-      <main className="ml-56 flex-1 min-h-screen flex flex-col bg-black">
+      <main className={`flex-1 min-h-screen flex flex-col bg-black transition-all duration-300 ${isSidebarOpen ? "ml-56" : "ml-0"}`}>
         {children}
       </main>
     </div>

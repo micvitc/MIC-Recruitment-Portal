@@ -75,6 +75,9 @@ export default function TurnstileWidget({
           onError?.();
         },
         "expired-callback": () => {
+          if (widgetIdRef.current && window.turnstile) {
+            window.turnstile.reset(widgetIdRef.current);
+          }
           onExpire?.();
         },
       });
