@@ -346,7 +346,8 @@ export default function StagePage({
     const handleResize = () => {
       if (typeof window !== "undefined") {
         const heightScale = window.innerHeight / 1024;
-        const cappedScale = Math.min(heightScale, 1.2);
+        const widthScale = window.innerWidth / 1200;
+        const cappedScale = Math.min(heightScale, widthScale, 1.2);
         setScale(cappedScale);
       }
     };

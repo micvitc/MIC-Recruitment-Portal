@@ -46,6 +46,7 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ["@arcjet/next"],
   async headers() {
     return [
       {

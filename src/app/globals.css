@@ -134,3 +134,44 @@ body {
   background: #FFDED6;
 }
 
+/* =====================================================
+   MOBILE VERTICAL LAYOUT UTILITIES
+   ===================================================== */
+
+/* Arrow Signboard — points right (arrowhead on right) */
+.sign-arrow-right {
+  clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 50%, calc(100% - 22px) 100%, 0 100%);
+}
+
+/* Arrow Signboard — points left (arrowhead on left) */
+.sign-arrow-left {
+  clip-path: polygon(22px 0, 100% 0, 100% 100%, 22px 100%, 0 50%);
+}
+
+/* Shadow shape for right-pointing sign */
+.sign-arrow-right-shadow {
+  clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 50%, calc(100% - 22px) 100%, 0 100%);
+}
+
+/* Shadow shape for left-pointing sign */
+.sign-arrow-left-shadow {
+  clip-path: polygon(22px 0, 100% 0, 100% 100%, 22px 100%, 0 50%);
+}
+
+@keyframes mobile-bird-float {
+  0%, 100% { transform: translateY(0px) rotate(-3deg); }
+  50%       { transform: translateY(-10px) rotate(3deg); }
+}
+
+.animate-mobile-bird {
+  animation: mobile-bird-float 2s ease-in-out infinite;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.25s ease-out both;
+}

@@ -133,12 +133,12 @@ export default function DepartmentPopup({
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-3 sm:p-6 select-none animate-fade-in overflow-y-auto"
+      className="fixed inset-0 z-50 bg-black/75 flex items-start sm:items-center justify-center p-3 sm:p-6 select-none animate-fade-in overflow-y-auto"
       onClick={onClose}
     >
       {/* Modal Container */}
       <div
-        className="w-full max-w-[850px] bg-[#FFE4D6] border-4 border-black rounded-[10px] p-3 sm:p-4 relative flex flex-col my-auto retro-shadow font-press-start"
+        className="w-full max-w-[850px] bg-[#FFE4D6] border-4 border-black rounded-[10px] p-3 sm:p-4 relative flex flex-col mt-4 sm:my-auto retro-shadow font-press-start"
         style={{ boxShadow: "8px 8px 0px 0px rgba(0,0,0,0.4)" }}
         onClick={(e) => e.stopPropagation()}
       >

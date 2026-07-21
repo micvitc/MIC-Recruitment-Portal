@@ -29,8 +29,26 @@ export default function MicLogo() {
     }
   };
 
+  const [scale, setScale] = React.useState(1);
+  React.useEffect(() => {
+    const handleResize = () => {
+      if (typeof window !== "undefined") {
+        const heightScale = window.innerHeight / 1024;
+        const widthScale = window.innerWidth / 1200;
+        const cappedScale = Math.min(heightScale, widthScale, 1.2);
+        setScale(cappedScale);
+      }
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
   return (
-    <div className="fixed top-6 left-4 z-50 pointer-events-none">
+    <div 
+      className="fixed top-6 left-4 z-50 pointer-events-none"
+      style={{ transform: `scale(${scale})`, transformOrigin: "top left" }}
+    >
       <img
         src="/mic_logo_pixel.png"
         alt="MIC Logo"

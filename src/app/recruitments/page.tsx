@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { Press_Start_2P } from "next/font/google";
 import DepartmentPopup, { DepartmentData } from "@/components/DepartmentPopup";
@@ -9,6 +10,7 @@ import { Loader2 } from "lucide-react";
 import posthog from "posthog-js";
 import RetroLoader from "@/components/RetroLoader";
 import MicLogo from "@/components/MicLogo";
+import MobileBackground from "@/components/MobileBackground";
 
 const pressStart = Press_Start_2P({
   weight: "400",
@@ -130,6 +132,281 @@ function NormalArrow({ top, left, width = 50, height = 30 }: { top: string; left
     </div>
   );
 }
+
+// ─── Mobile Helper: Separate Triangle + Pill Signboard ───
+function MobileQuestSign({
+  label,
+  direction,
+  state,
+  progressStatus,
+  onClick,
+}: {
+  label: string;
+  direction: "left" | "right";
+  state: "available" | "selected" | "disabled";
+  progressStatus?: string;
+  onClick: () => void;
+}) {
+  const isRight = direction === "right";
+  const isSelected = state === "selected";
+  const isDisabled = state === "disabled";
+  
+  const bgColor = isDisabled ? "bg-[#9C7A3A]" : isSelected ? "bg-[#F0C050]" : "bg-[#E8A830]";
+  const triangleFill = isDisabled ? "#9C7A3A" : isSelected ? "#F0C050" : "#E8A830";
+
+  return (
+    <button
+      onClick={isDisabled ? undefined : onClick}
+      className={`relative flex items-center gap-1 select-none focus:outline-none flex-shrink-0 ${
+        isDisabled
+          ? "opacity-60 cursor-not-allowed"
+          : "cursor-pointer active:scale-95 transition-transform"
+      }`}
+      aria-label={label}
+    >
+      {/* If pointing left, triangle is on the left */}
+      {!isRight && (
+        <svg width="24" height="28" viewBox="0 0 24 28" className="flex-shrink-0 drop-shadow-[2px_2px_0px_rgba(0,0,0,0.35)]">
+          {/* Triangle pointing left */}
+          <path d="M 2 14 L 22 2 L 22 26 Z" fill={triangleFill} stroke="#2A1A00" strokeWidth="3" strokeLinejoin="round" />
+        </svg>
+      )}
+
+      {/* Pill shape */}
+      <div className={`flex items-center justify-center px-4 py-2 border-[3px] border-[#2A1A00] rounded-full ${bgColor} relative`}
+           style={{ width: "170px", height: "42px", boxShadow: "2px 2px 0px rgba(0,0,0,0.35)" }}>
+        <span className="font-bold tracking-wider uppercase text-black text-[10px] whitespace-nowrap overflow-hidden text-ellipsis px-2 leading-none" style={{ marginTop: "2px" }}>{label}</span>
+        
+        {/* Status badge */}
+        {isSelected && progressStatus && (
+          <div
+            className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-[7px] font-bold uppercase tracking-wider text-[#72F418]"
+            style={{ textShadow: "1px 1px 0 #000" }}
+          >
+            {progressStatus.replace("-", " ")}
+          </div>
+        )}
+      </div>
+
+      {/* If pointing right, triangle is on the right */}
+      {isRight && (
+        <svg width="24" height="28" viewBox="0 0 24 28" className="flex-shrink-0 drop-shadow-[2px_2px_0px_rgba(0,0,0,0.35)]">
+          {/* Triangle pointing right */}
+          <path d="M 22 14 L 2 2 L 2 26 Z" fill={triangleFill} stroke="#2A1A00" strokeWidth="3" strokeLinejoin="round" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
+// ─── Mobile Helper: Horizontal pipe stub on left/right edge ──────────────────
+function MobileEdgePipe({ side }: { side: "left" | "right" }) {
+  const isLeft = side === "left";
+  return (
+    <div className={`flex items-center flex-shrink-0 ${isLeft ? "ml-[-10px]" : "mr-[-10px]"}`}>
+      {isLeft ? (
+        <>
+          <div className="h-[36px] w-[24px] bg-[#52AE26] border-y-[3px] border-black relative">
+             <div className="absolute top-0 right-0 w-[4px] h-full bg-[#72F418] opacity-50" />
+          </div>
+          <div className="h-[46px] w-[14px] bg-[#52AE26] border-[3px] border-black rounded-[2px] relative z-10">
+             <div className="absolute top-0 right-1 w-[2px] h-full bg-[#72F418] opacity-80" />
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="h-[46px] w-[14px] bg-[#52AE26] border-[3px] border-black rounded-[2px] relative z-10">
+             <div className="absolute top-0 left-1 w-[2px] h-full bg-[#72F418] opacity-80" />
+          </div>
+          <div className="h-[36px] w-[24px] bg-[#52AE26] border-y-[3px] border-black relative">
+             <div className="absolute top-0 left-0 w-[4px] h-full bg-[#72F418] opacity-50" />
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ─── Mobile Quests View (Tech or Non-Tech) ───────────────────────────────────
+function MobileQuestsView({
+  type,
+  quests,
+  appStatus,
+  onBack,
+  onQuestSelect,
+  playSound,
+  router,
+}: {
+  type: "tech" | "non-tech";
+  quests: DepartmentData[];
+  appStatus: ApplicationStatus | null;
+  onBack: () => void;
+  onQuestSelect: (q: DepartmentData, type: "tech" | "non-tech", slug: string) => void;
+  playSound: (t: "select" | "jump" | "open" | "close" | "die" | "point") => void;
+  router: ReturnType<typeof useRouter>;
+}) {
+  const title = type === "tech" ? "Technical Quests" : "Non Technical Quests";
+  const marqueeText = "MICROSOFT INNOVATIONS CLUB";
+
+  // Determine which pref type is already used so we know if all in this category are locked
+  const thisPrefType = type;
+  const allLocked =
+    (appStatus?.firstPrefType === thisPrefType && appStatus?.firstPreference !== undefined) ||
+    (appStatus?.secondPrefType === thisPrefType && appStatus?.secondPreference !== undefined);
+
+  const getSlug = (q: DepartmentData) =>
+    ROLE_TO_SLUG[q.role] ?? q.role.toLowerCase().replace(/\s+/g, "-");
+
+  // Application status card info (first or second preference in this category)
+  const appliedQuest =
+    quests.find((q) => getSlug(q) === appStatus?.firstPreference) ||
+    quests.find((q) => getSlug(q) === appStatus?.secondPreference);
+  const appliedSlug = appliedQuest ? getSlug(appliedQuest) : null;
+  const isFirstPref = appliedSlug && appStatus?.firstPreference === appliedSlug;
+  const appliedStatus = isFirstPref
+    ? appStatus?.firstPrefProgress.status
+    : appStatus?.secondPrefProgress.status;
+
+  return (
+    <MobileBackground>
+      {/* Top pipe (touches top of screen) */}
+      <div className="relative z-10 flex flex-col items-center flex-shrink-0 mt-[-10px]">
+        <div
+          className="pixelated pointer-events-none"
+          style={{
+            width: "52px",
+            height: "80px",
+            borderStyle: "solid",
+            borderWidth: "0 0 24px 0",
+            borderColor: "transparent",
+            borderImageSource: "url(/green_pipe.png)",
+            borderImageSlice: "0 0 64 0 fill",
+            borderImageRepeat: "stretch",
+          }}
+        />
+        <img
+          src="/flappy_bird.svg"
+          alt="Flappy Bird"
+          className="w-[50px] h-[50px] pixelated animate-mobile-bird drop-shadow-[2px_2px_0px_rgba(0,0,0,0.3)] mt-2"
+        />
+      </div>
+
+      {/* Top bar (absolute so pipe goes behind/above) */}
+      <div className="absolute top-0 left-0 w-full z-20 flex items-center justify-between px-3 pt-3 pointer-events-none">
+        <img
+          src="/mic_logo_pixel.png"
+          alt="MIC Logo"
+          className="pixelated w-[52px] h-[37px] animate-retro-float-small drop-shadow-[2px_2px_0px_rgba(0,0,0,0.5)] cursor-pointer pointer-events-auto"
+          onClick={() => { playSound("select"); router.push("/"); }}
+        />
+        <button
+          onClick={() => { playSound("open"); router.push("/faqs?from=/recruitments"); }}
+          className="bg-[#7CA922] text-black text-[9px] font-bold py-1.5 px-4 border-4 border-black uppercase tracking-wider pointer-events-auto"
+          style={{ boxShadow: "3px 3px 0px 0px #000" }}
+        >
+          FAQS
+        </button>
+      </div>
+
+      {/* Title */}
+      <div className="relative z-10 px-4 pt-4 flex-shrink-0 text-center">
+        <h1 className="text-black font-bold leading-tight" style={{ fontSize: "clamp(26px, 8vw, 36px)" }}>
+          {title}
+        </h1>
+      </div>
+
+      {/* Quest signboards list */}
+      <div className="relative z-10 flex flex-col justify-evenly flex-grow w-full py-4 min-h-[350px] overflow-x-hidden">
+        {quests.map((q, idx) => {
+          const slug = getSlug(q);
+          const isLeft = idx % 2 === 0; // even = left-pointing, odd = right-pointing
+          let state: "available" | "selected" | "disabled" = "available";
+          let progressStatus = undefined;
+
+          if (appStatus?.firstPreference === slug) {
+            state = "selected";
+            progressStatus = appStatus.firstPrefProgress.status;
+          } else if (appStatus?.secondPreference === slug) {
+            state = "selected";
+            progressStatus = appStatus.secondPrefProgress.status;
+          } else if (
+            (appStatus?.firstPrefType === type && appStatus?.firstPreference && appStatus.firstPreference !== slug) ||
+            (appStatus?.secondPrefType === type && appStatus?.secondPreference && appStatus.secondPreference !== slug)
+          ) {
+            state = "disabled";
+          }
+
+          return (
+            <div
+              key={`mobile-quest-${idx}`}
+              className={`flex items-center w-full ${isLeft ? "justify-start" : "justify-end"}`}
+            >
+              {isLeft ? (
+                <>
+                  {/* Left-pointing sign */}
+                  <MobileEdgePipe side="left" />
+                  <div className="z-10 ml-1">
+                    <MobileQuestSign
+                      label={q.title}
+                      direction="left"
+                      state={state}
+                      progressStatus={progressStatus}
+                      onClick={() => onQuestSelect(q, type, slug)}
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Right-pointing sign */}
+                  <div className="z-10 mr-1">
+                    <MobileQuestSign
+                      label={q.title}
+                      direction="right"
+                      state={state}
+                      progressStatus={progressStatus}
+                      onClick={() => onQuestSelect(q, type, slug)}
+                    />
+                  </div>
+                  <MobileEdgePipe side="right" />
+                </>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Application Status Card (if user has applied to a dept in this category) */}
+      {appliedQuest && appliedSlug && (
+        <div 
+          className="relative z-10 mx-4 mt-3 mb-2 bg-[#B1691F] border-[2px] border-[#D69E60] p-4 flex-shrink-0" 
+          style={{ boxShadow: "4px 4px 0px 0px rgba(0,0,0,0.3)" }}
+        >
+          <div className="text-white text-[12px] font-bold tracking-wider mb-3 uppercase text-center leading-tight">
+            Recruitment<br/>Status
+          </div>
+          <div className="text-[7px] font-bold uppercase tracking-wider text-white mb-2">
+            YOUR SELECTED QUEST : {appliedQuest.title}
+          </div>
+          <div className="text-[7px] font-bold uppercase tracking-wider text-white">
+            RESULT :{" "}
+            <span
+              className={`${
+                appliedStatus === "passed" || appliedStatus === "active"
+                  ? "text-[#72F418]"
+                  : appliedStatus === "rejected"
+                  ? "text-[#FF4444]"
+                  : "text-[#72F418]" // default to green for in progress
+              }`}
+            >
+              {appliedStatus?.replace("-", " ").toUpperCase() || "IN PROGRESS"}
+            </span>
+          </div>
+        </div>
+      )}
+    </MobileBackground>
+  );
+}
+
 interface StageProgress {
   stage: number;
   result: "pending" | "passed" | "failed";
@@ -247,6 +524,10 @@ const STATIC_PIPES: PipeData[] = [
 
 export default function RecruitmentsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [isMobile, setIsMobile] = useState(false);
+  // Mobile view: "tech" | "non-tech" — read from ?view= query param
+  const mobileView = (searchParams.get("view") as "tech" | "non-tech" | null) ?? "tech";
   const [selectedDepartment, setSelectedDepartment] = useState<DepartmentData | null>(null);
   const [birdScore, setBirdScore] = useState(0);
   const [birdFlap, setBirdFlap] = useState(false);
@@ -402,8 +683,11 @@ export default function RecruitmentsPage() {
   useEffect(() => {
     const handleResize = () => {
       if (typeof window !== "undefined") {
-        const heightScale = window.innerHeight / 1024;
-        const cappedScale = Math.min(heightScale, 1.2); // Cap scale to prevent heavy pixel stretch
+        setIsMobile(window.innerWidth < 768);
+        // Subtract 16px to account for the custom retro-scrollbar height so it doesn't overlap the ground
+        const heightScale = (window.innerHeight - 16) / 1024;
+        const widthScale = window.innerWidth / 1200;
+        const cappedScale = Math.min(heightScale, widthScale, 1.2); // Cap scale to prevent heavy pixel stretch
         latestScaleRef.current = cappedScale;
         setScale(cappedScale);
       }
@@ -811,6 +1095,67 @@ export default function RecruitmentsPage() {
 
   // Dynamic quests lists are fetched from backend on load
 
+  // ── Mobile rendering ─────────────────────────────────────────────────────────
+  if (isMobile) {
+    return (
+      <div className={`${pressStart.variable} font-press-start`}>
+        <RetroLoader isLoading={isLoadingApp} title="LOADING MAP" />
+        <MobileQuestsView
+          type={mobileView}
+          quests={mobileView === "tech" ? techQuests : nonTechQuests}
+          appStatus={appStatus}
+          onBack={() => router.push("/")}
+          onQuestSelect={handleOpenPopup}
+          playSound={playRetroSound}
+          router={router}
+        />
+        {/* Popup overlays — same as desktop */}
+        {selectedDepartment && (
+          <DepartmentPopup
+            department={selectedDepartment}
+            onClose={() => {
+              playRetroSound("close");
+              setSelectedDepartment(null);
+            }}
+            onApply={handleApplyFromPopup}
+          />
+        )}
+        {prefConfirmRole && (
+          <PreferenceConfirmationModal
+            roleTitle={selectedDepartment?.title || prefConfirmRole}
+            firstPreference={appStatus?.firstPreference}
+            secondPreference={appStatus?.secondPreference}
+            onConfirm={handleConfirmPreference}
+            onCancel={() => {
+              playRetroSound("close");
+              setPrefConfirmRole(null);
+            }}
+          />
+        )}
+        {error && (
+          <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center p-4">
+            <div className="bg-[#FFE4D6] border-4 border-black p-8 max-w-lg w-full relative flex flex-col items-center gap-6" style={{ boxShadow: "8px 8px 0px 0px rgba(0,0,0,0.5)" }}>
+              <div className="bg-[#A93710] text-white px-4 py-2 border-2 border-black text-[12px] uppercase tracking-widest font-bold -mt-12 mb-2" style={{ boxShadow: "4px 4px 0px 0px #000" }}>
+                CONNECTION ERROR
+              </div>
+              <div className="text-[#A93710] text-[12px] text-center leading-loose uppercase tracking-widest font-bold">
+                {error}
+              </div>
+              <button
+                onClick={() => fetchStatus()}
+                className="mt-2 bg-[#E29A2B] hover:bg-[#F0AD3D] border-4 border-black py-3 px-8 text-[12px] font-bold text-black uppercase tracking-wider active:scale-95 transition-transform"
+                style={{ boxShadow: "4px 4px 0px 0px #000" }}
+              >
+                RETRY CONNECTION
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Desktop rendering ────────────────────────────────────────────────────────
   return (
     <div
       className={`${pressStart.variable} font-press-start w-full h-[100dvh] overflow-x-auto overflow-y-hidden retro-scrollbar select-none bg-[#DD9955] relative`}
@@ -819,7 +1164,10 @@ export default function RecruitmentsPage() {
       onClick={handleContainerClick}
     >
       {/* Floating Header Buttons (Fixed) */}
-      <div className="fixed top-6 right-6 z-50 flex items-center gap-4">
+      <div 
+        className="fixed top-6 right-6 z-50 flex items-center gap-4"
+        style={{ transform: `scale(${scale})`, transformOrigin: "top right" }}
+      >
         <button
           onClick={() => {
             playRetroSound("open");

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Press_Start_2P } from "next/font/google";
 import MicLogo from "@/components/MicLogo";
+import MobileBackground from "@/components/MobileBackground";
 
 const pressStart = Press_Start_2P({
   weight: "400",
@@ -64,7 +65,8 @@ export default function RetroLoader({
     const handleResize = () => {
       if (typeof window !== "undefined") {
         const heightScale = window.innerHeight / 1024;
-        const cappedScale = Math.min(heightScale, 1.2);
+        const widthScale = window.innerWidth / 1200;
+        const cappedScale = Math.min(heightScale, widthScale, 1.2);
         setScale(cappedScale);
       }
     };
@@ -122,10 +124,66 @@ export default function RetroLoader({
   const MARQUEE_TEXT = "MICROSOFT INNOVATIONS CLUB TENURE 2026-2027";
 
   return (
-    <div className={`${pressStart.variable} font-press-start fixed inset-0 z-[999] w-full h-[100dvh] overflow-hidden select-none bg-[#DD9955] flex justify-center items-center`}>
-      {/* Absolute positioned scaled background container centered horizontally (Identical to page.tsx) */}
+    <div className={`${pressStart.variable} font-press-start fixed inset-0 z-[999] w-full h-[100dvh] overflow-hidden select-none bg-black flex justify-center items-center`}>
+      
+      {/* ── MOBILE LAYOUT (Matches 3.png) ── */}
+      <div className="block md:hidden relative w-full h-[100dvh]">
+        <MobileBackground>
+          {/* Top bar */}
+          <div className="relative z-20 flex items-center justify-between px-3 pt-3 flex-shrink-0">
+            <img
+              src="/mic_logo_pixel.png"
+              alt="MIC Logo"
+              className="pixelated w-[52px] h-[37px] drop-shadow-[2px_2px_0px_rgba(0,0,0,0.5)]"
+            />
+          </div>
+
+          {/* Main Content Area */}
+          <div className="relative z-10 flex flex-col items-center flex-grow pt-4">
+            <h1 className="relative z-20 text-white font-bold leading-tight uppercase tracking-normal text-center px-4" style={{ fontSize: "clamp(16px, 5vw, 22px)", textShadow: "2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000" }}>
+              {title || "LOADING MAP"}
+            </h1>
+
+            {/* Wooden Progress Panel */}
+            <div className="relative w-[90%] max-w-[340px] mt-8 bg-[#C8862A] border-[3px] border-[#2A1A00] p-4 flex flex-col items-center rounded-sm"
+                 style={{ boxShadow: "4px 4px 0 rgba(0,0,0,0.5)" }}>
+              
+              {/* Top Pipes that touch the board and go up */}
+              <div className="absolute bottom-[100%] left-[10px] w-[14px] bg-[#52AE26] border-x-[3px] border-black z-0" style={{ height: "50vh" }} />
+              <div className="absolute bottom-[100%] right-[10px] w-[14px] bg-[#52AE26] border-x-[3px] border-black z-0" style={{ height: "50vh" }} />
+
+              {/* Corner screws */}
+              {[
+                { top: 4, left: 4 }, { top: 4, right: 4 },
+                { bottom: 4, left: 4 }, { bottom: 4, right: 4 },
+              ].map((pos, i) => (
+                <div key={i} className="absolute w-[4px] h-[4px] rounded-full bg-[#333] border border-black" style={pos} />
+              ))}
+
+              <p className="text-black font-bold uppercase text-[9px] tracking-wide mb-3 text-center px-2">
+                {statusText}
+              </p>
+
+              <div className="flex items-center w-full gap-2 px-2">
+                <div className="w-4 h-4 rounded-full bg-[#52AE26] border-[2px] border-black shrink-0" />
+                <div className="flex-grow h-[14px] bg-white border-[2px] border-black rounded-[2px] overflow-hidden">
+                  <div className="h-full bg-[linear-gradient(180deg,#72F418_0%,#52AE26_100%)] transition-all duration-150 ease-out"
+                       style={{ width: `${progress}%`, borderRight: progress < 100 ? "2px solid #000" : "none" }} />
+                </div>
+                <div className="w-4 h-4 rounded-full bg-[#52AE26] border-[2px] border-black shrink-0" />
+              </div>
+
+              <p className="text-black font-bold text-[10px] mt-3">
+                {progress}%
+              </p>
+            </div>
+          </div>
+        </MobileBackground>
+      </div>
+
+      {/* ── DESKTOP LAYOUT (Original) ── */}
       <div
-        className="absolute top-0 left-1/2 -translate-x-1/2"
+        className="hidden md:block absolute top-0 left-1/2 -translate-x-1/2"
         style={{
           width: "2865px",
           height: "1024px",
@@ -134,6 +192,7 @@ export default function RetroLoader({
         }}
       >
         <div className="w-[2865px] h-[1024px] absolute top-0 left-0 bg-[linear-gradient(180deg,#1188EE_0%,#0E8AEA_25%,#1093EB_35%,#1197EC_46%,#16B6F4_52%,#10CBF1_56%,#0FC6F1_60%,#15DEF0_65%,#15DEF0_81%)] overflow-hidden">
+
           
           {/* Floating Clouds */}
           <img src="/pixel_cloud_small.svg" alt="Cloud" className="absolute top-[300px] left-[1060px] w-[280px] opacity-85 animate-retro-float pixelated select-none pointer-events-none" style={{ animationDelay: "0s" }} />
@@ -303,7 +362,9 @@ export default function RetroLoader({
       </div>
       
       {/* Static Header Elements */}
-      <MicLogo />
+      <div className="hidden md:block">
+        <MicLogo />
+      </div>
     </div>
   );
 }
