@@ -10,6 +10,7 @@ import { Loader2 } from "lucide-react";
 import posthog from "posthog-js";
 import RetroLoader from "@/components/RetroLoader";
 import MicLogo from "@/components/MicLogo";
+import MobileBackground from "@/components/MobileBackground";
 import { playRetroSound } from "@/lib/audio";
 
 const pressStart = Press_Start_2P({
@@ -236,6 +237,7 @@ function MobileQuestsView({
   onQuestSelect,
   playSound,
   router,
+  isLoggedIn,
 }: {
   type: "tech" | "non-tech";
   quests: DepartmentData[];
@@ -244,6 +246,7 @@ function MobileQuestsView({
   onQuestSelect: (q: DepartmentData, type: "tech" | "non-tech", slug: string) => void;
   playSound: (t: "select" | "jump" | "open" | "close" | "die" | "point") => void;
   router: ReturnType<typeof useRouter>;
+  isLoggedIn?: boolean;
 }) {
   const title = type === "tech" ? "Technical Quests" : "Non Technical Quests";
   const marqueeText = "MICROSOFT INNOVATIONS CLUB";
@@ -299,13 +302,22 @@ function MobileQuestsView({
           className="pixelated w-[52px] h-[37px] animate-retro-float-small drop-shadow-[2px_2px_0px_rgba(0,0,0,0.5)] cursor-pointer pointer-events-auto"
           onClick={() => { playSound("select"); router.push("/"); }}
         />
-        <button
-          onClick={() => { playSound("open"); router.push("/faqs?from=/recruitments"); }}
-          className="bg-[#7CA922] text-black text-[9px] font-bold py-1.5 px-4 border-4 border-black uppercase tracking-wider pointer-events-auto"
-          style={{ boxShadow: "3px 3px 0px 0px #000" }}
-        >
-          FAQS
-        </button>
+        <div className="flex items-center gap-2 pointer-events-auto">
+          <button
+            onClick={() => { playSound("open"); router.push("/faqs?from=/recruitments"); }}
+            className="bg-[#7CA922] text-black text-[9px] font-bold py-1.5 px-3 border-4 border-black uppercase tracking-wider cursor-pointer"
+            style={{ boxShadow: "3px 3px 0px 0px #000" }}
+          >
+            FAQS
+          </button>
+          <button
+            onClick={() => { playSound("open"); router.push(isLoggedIn ? "/profile" : "/login?callbackUrl=/recruitments"); }}
+            className="bg-[#1093EB] text-white text-[9px] font-bold py-1.5 px-3 border-4 border-black uppercase tracking-wider cursor-pointer"
+            style={{ boxShadow: "3px 3px 0px 0px #000" }}
+          >
+            {isLoggedIn ? "PROFILE" : "LOGIN"}
+          </button>
+        </div>
       </div>
 
       {/* Title */}
@@ -1038,6 +1050,7 @@ export default function RecruitmentsPage() {
           onQuestSelect={handleOpenPopup}
           playSound={playRetroSound}
           router={router}
+          isLoggedIn={isLoggedIn}
         />
         {/* Popup overlays — same as desktop */}
         {selectedDepartment && (

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Press_Start_2P } from "next/font/google";
 import TurnstileWidget from "@/components/TurnstileWidget";
 import MicLogo from "@/components/MicLogo";
+import MobileBackground from "@/components/MobileBackground";
 import { playRetroSound } from "@/lib/audio";
 
 const pressStart = Press_Start_2P({
@@ -209,92 +210,26 @@ export default function LoginPage() {
   // ── Mobile Layout ────────────────────────────────────────────────────────────
   if (isMobile) {
     return (
-      <div
-        className={`${pressStart.variable} font-press-start w-full min-h-[100dvh] flex flex-col overflow-hidden select-none`}
-        style={{ background: "linear-gradient(180deg,#1188EE 0%,#0E8AEA 25%,#1093EB 35%,#1197EC 46%,#16B6F4 52%,#10CBF1 56%,#0FC6F1 60%,#15DEF0 65%,#15DEF0 81%)" }}
-      >
-        {/* Clouds */}
-        <img src="/pixel_cloud_small.svg" alt="" className="absolute top-[60px] left-[10px] w-[130px] opacity-80 animate-retro-float pixelated pointer-events-none" style={{ animationDelay: "0s" }} />
-        <img src="/pixel_cloud_small.svg" alt="" className="absolute top-[30px] right-[20px] w-[110px] opacity-70 animate-retro-float pixelated pointer-events-none" style={{ animationDelay: "1.2s" }} />
-
-        {/* Two pipes hanging from top */}
-        <div className="relative w-full pointer-events-none">
-          <div
-            className="absolute pixelated"
-            style={{
-              left: "30%",
-              top: 0,
-              width: "52px",
-              height: "60px",
-              borderStyle: "solid",
-              borderWidth: "0 0 24px 0",
-              borderColor: "transparent",
-              borderImageSource: "url(/green_pipe.png)",
-              borderImageSlice: "0 0 64 0 fill",
-              borderImageRepeat: "stretch",
-            }}
-          />
-          <div
-            className="absolute pixelated"
-            style={{
-              right: "25%",
-              top: 0,
-              width: "52px",
-              height: "45px",
-              borderStyle: "solid",
-              borderWidth: "0 0 24px 0",
-              borderColor: "transparent",
-              borderImageSource: "url(/green_pipe.png)",
-              borderImageSlice: "0 0 64 0 fill",
-              borderImageRepeat: "stretch",
-            }}
-          />
-        </div>
-
-        {/* Top bar: Logo */}
-        <div className="relative z-20 flex items-center justify-between px-3 pt-3">
-          <img
-            src="/mic_logo_pixel.png"
-            alt="MIC Logo"
-            className="pixelated w-[56px] h-[40px] animate-retro-float-small drop-shadow-[3px_3px_0px_rgba(0,0,0,0.5)] cursor-pointer"
-            onClick={() => router.push("/")}
-          />
-          <div /> {/* Spacer */}
-        </div>
-
-        {/* Login Dialog */}
-        <div className="relative z-10 flex-1 flex items-center justify-center px-4 py-6">
-          <div className="w-full max-w-sm animate-pixel-slide-up">
-            <LoginDialog {...dialogProps} />
+      <div className={`${pressStart.variable} font-press-start w-full h-[100dvh]`}>
+        <MobileBackground>
+          {/* Top bar: Logo */}
+          <div className="relative z-20 flex items-center justify-between px-3 pt-3">
+            <img
+              src="/mic_logo_pixel.png"
+              alt="MIC Logo"
+              className="pixelated w-[56px] h-[40px] animate-retro-float-small drop-shadow-[3px_3px_0px_rgba(0,0,0,0.5)] cursor-pointer"
+              onClick={() => router.push("/")}
+            />
+            <div /> {/* Spacer */}
           </div>
-        </div>
 
-        {/* Bottom ground */}
-        <div className="w-full flex flex-col pointer-events-none select-none flex-shrink-0">
-          <div className="w-full bg-[#52AE26] border-t-4 border-b-4 border-black" style={{ height: "18px" }}>
-            <div className="w-full h-[3px] bg-[#72F418]" />
-          </div>
-          <div className="w-full bg-[#DD9955] overflow-hidden flex items-center" style={{ height: "38px" }}>
-            <div className="flex whitespace-nowrap animate-marquee">
-              <span className="inline-flex items-center shrink-0 text-[11px] text-[#CC7700] tracking-wider uppercase font-bold">
-                {Array(8).fill("MICROSOFT INNOVATIONS CLUB").map((text, idx) => (
-                  <React.Fragment key={idx}>
-                    <span>{text}</span>
-                    <img src="/mic_logo_pixel.png" alt="MIC" className="w-5 h-5 mx-3 shrink-0" />
-                  </React.Fragment>
-                ))}
-              </span>
-              <span className="inline-flex items-center shrink-0 text-[11px] text-[#CC7700] tracking-wider uppercase font-bold">
-                {Array(8).fill("MICROSOFT INNOVATIONS CLUB").map((text, idx) => (
-                  <React.Fragment key={idx}>
-                    <span>{text}</span>
-                    <img src="/mic_logo_pixel.png" alt="MIC" className="w-5 h-5 mx-3 shrink-0" />
-                  </React.Fragment>
-                ))}
-              </span>
+          {/* Login Dialog */}
+          <div className="relative z-10 flex-1 flex items-center justify-center px-4 py-6">
+            <div className="w-full max-w-sm animate-pixel-slide-up">
+              <LoginDialog {...dialogProps} />
             </div>
           </div>
-        </div>
+        </MobileBackground>
       </div>
     );
   }
