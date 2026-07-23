@@ -4,8 +4,8 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Press_Start_2P } from "next/font/google";
 import RetroLoader from "@/components/RetroLoader";
-import MicLogo from "@/components/MicLogo";
 import MobileBackground from "@/components/MobileBackground";
+import MicLogo from "@/components/MicLogo";
 import { playRetroSound } from "@/lib/audio";
 
 const pressStart = Press_Start_2P({
@@ -90,22 +90,40 @@ const CountdownTimer: React.FC<CountdownProps> = ({ targetDate, onExpiry }) => {
 };
 
 function RetroPipe({ height, top, left, isTop }: { height: number; top: string; left: string; isTop: boolean }) {
+  const bodyHeight = Math.max(0, height - 24);
+  const gradientStyle = {
+    background: "linear-gradient(90deg, #b8f848 0%, #b8f848 14%, #73bf2e 14%, #73bf2e 28%, #52c017 28%, #52c017 68%, #38800e 68%, #38800e 84%, #204803 84%, #204803 100%)",
+  };
+
   return (
     <div
-      className="absolute select-none pointer-events-none z-30 w-[52px] pixelated"
-      style={{
-        left,
-        top,
-        height: `${height}px`,
-        transform: isTop ? "none" : "scaleY(-1)",
-        borderStyle: "solid",
-        borderWidth: "0 0 24px 0",
-        borderColor: "transparent",
-        borderImageSource: "url(/green_pipe.png)",
-        borderImageSlice: "0 0 64 0 fill",
-        borderImageRepeat: "stretch",
-      }}
-    />
+      className="absolute select-none pointer-events-none z-30 w-[52px] flex flex-col items-center"
+      style={{ left, top, height: `${height}px` }}
+    >
+      {isTop ? (
+        <>
+          <div
+            className="w-[46px] border-x-[3px] border-t-[3px] border-black box-border"
+            style={{ height: `${bodyHeight}px`, ...gradientStyle }}
+          />
+          <div
+            className="w-[52px] h-[24px] border-[3px] border-black box-border shadow-[inset_0_-3px_0_0_rgba(0,0,0,0.4)] flex-shrink-0"
+            style={gradientStyle}
+          />
+        </>
+      ) : (
+        <>
+          <div
+            className="w-[52px] h-[24px] border-[3px] border-black box-border shadow-[inset_0_3px_0_0_rgba(255,255,255,0.4)] flex-shrink-0"
+            style={gradientStyle}
+          />
+          <div
+            className="w-[46px] border-x-[3px] border-b-[3px] border-black box-border"
+            style={{ height: `${bodyHeight}px`, ...gradientStyle }}
+          />
+        </>
+      )}
+    </div>
   );
 }
 
@@ -113,20 +131,22 @@ function RetroPipe({ height, top, left, isTop }: { height: number; top: string; 
 function PipeStub({ marginLeft, marginRight }: { marginLeft?: string; marginRight?: string }) {
   return (
     <div
-      className="pixelated pointer-events-none select-none flex-shrink-0"
-      style={{
-        width: "52px",
-        height: "52px",
-        borderStyle: "solid",
-        borderWidth: "0 0 24px 0",
-        borderColor: "transparent",
-        borderImageSource: "url(/green_pipe.png)",
-        borderImageSlice: "0 0 64 0 fill",
-        borderImageRepeat: "stretch",
-        marginLeft: marginLeft ?? "0",
-        marginRight: marginRight ?? "0",
-      }}
-    />
+      className="w-[52px] h-[52px] flex flex-col items-center pointer-events-none select-none flex-shrink-0"
+      style={{ marginLeft: marginLeft ?? "0", marginRight: marginRight ?? "0" }}
+    >
+      <div
+        className="w-[46px] h-[28px] border-x-[3px] border-t-[3px] border-black box-border"
+        style={{
+          background: "linear-gradient(90deg, #b8f848 0%, #b8f848 14%, #73bf2e 14%, #73bf2e 28%, #52c017 28%, #52c017 68%, #38800e 68%, #38800e 84%, #204803 84%, #204803 100%)"
+        }}
+      />
+      <div
+        className="w-[52px] h-[24px] border-[3px] border-black box-border shadow-[inset_0_-3px_0_0_rgba(0,0,0,0.4)] flex-shrink-0"
+        style={{
+          background: "linear-gradient(90deg, #b8f848 0%, #b8f848 14%, #73bf2e 14%, #73bf2e 28%, #52c017 28%, #52c017 68%, #38800e 68%, #38800e 84%, #204803 84%, #204803 100%)"
+        }}
+      />
+    </div>
   );
 }
 
