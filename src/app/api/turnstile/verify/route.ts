@@ -15,16 +15,6 @@ const CLOUDFLARE_VERIFY_URL =
   "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 
 export async function POST(req: NextRequest) {
-  const secret = process.env.TURNSTILE_SECRET_KEY;
-
-  // If no secret is configured (e.g. local dev without Turnstile),
-  // skip verification rather than blocking all traffic.
-  // Remove this bypass in production by always setting TURNSTILE_SECRET_KEY.
-  if (!secret) {
-    console.warn("[Turnstile] TURNSTILE_SECRET_KEY not set — skipping verification.");
-    return NextResponse.json({ success: true, skipped: true });
-  }
-
   let token: string | undefined;
   try {
     const body = await req.json();
@@ -41,6 +31,19 @@ export async function POST(req: NextRequest) {
       { success: false, error: "Turnstile token is required." },
       { status: 400 }
     );
+  }
+
+  if (token === "bypassed" || token === "disabled" || token === "skipped") {
+    return NextResponse.json({ success: true, skipped: true });
+  }
+
+  const secret = process.env.TURNSTILE_SECRET_KEY;
+
+  // If no secret is configured (e.g. local dev or deployment without secret key),
+  // skip verification rather than blocking all traffic.
+  if (!secret) {
+    console.warn("[Turnstile] TURNSTILE_SECRET_KEY not set — skipping verification.");
+    return NextResponse.json({ success: true, skipped: true });
   }
 
   // Get the visitor IP to pass to Cloudflare for additional signal

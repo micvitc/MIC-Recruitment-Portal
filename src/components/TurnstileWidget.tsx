@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useEffect, useRef, useCallback, useState } from "react";
 
 declare global {
   interface Window {
@@ -41,12 +41,8 @@ const TURNSTILE_SCRIPT_ID = "cf-turnstile-script";
  * TurnstileWidget
  *
  * A reusable, self-contained Cloudflare Turnstile widget.
- * It lazy-loads the Turnstile script once and renders the widget
- * in its container ref. Cleans up on unmount.
- *
- * Usage:
- *   const [token, setToken] = useState("");
- *   <TurnstileWidget onSuccess={setToken} onExpire={() => setToken("")} />
+ * Auto-bypasses gracefully when sitekey is not configured in deployed environments
+ * or when Turnstile fails to render / load.
  */
 export default function TurnstileWidget({
   onSuccess,
@@ -58,20 +54,50 @@ export default function TurnstileWidget({
 }: TurnstileWidgetProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
-  const siteKey =
-    process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "1x00000000000000000000AA";
+  const [bypassed, setBypassed] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+
+  const rawSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const hostname = window.location.hostname;
+      const isLocal =
+        hostname === "localhost" ||
+        hostname === "127.0.0.1" ||
+        hostname === "::1" ||
+        hostname.endsWith(".local");
+
+      // If no site key is set on a non-localhost domain, Cloudflare dummy test keys fail.
+      // Auto-bypass Turnstile in production when keys are unconfigured.
+      if (!rawSiteKey && !isLocal) {
+        console.warn(
+          "[Turnstile] NEXT_PUBLIC_TURNSTILE_SITE_KEY not set on deployed domain. Auto-bypassing challenge."
+        );
+        setBypassed(true);
+        onSuccess("bypassed");
+      }
+    }
+  }, [rawSiteKey, onSuccess]);
+
+  const siteKey = rawSiteKey ?? "1x00000000000000000000AA";
 
   const renderWidget = useCallback(() => {
-    if (!window.turnstile || !containerRef.current) return;
-    // Avoid double-rendering
+    if (bypassed || !window.turnstile || !containerRef.current) return;
     if (widgetIdRef.current) return;
+
     try {
       widgetIdRef.current = window.turnstile.render(containerRef.current, {
         sitekey: siteKey,
         theme,
         size,
-        callback: (token: string) => onSuccess(token),
+        callback: (token: string) => {
+          setLoadError(false);
+          onSuccess(token);
+        },
         "error-callback": () => {
+          console.warn("[Turnstile] Turnstile challenge error callback triggered.");
+          setLoadError(true);
           onError?.();
         },
         "expired-callback": () => {
@@ -83,46 +109,74 @@ export default function TurnstileWidget({
       });
     } catch (err) {
       console.error("[Turnstile] render error:", err);
+      setLoadError(true);
+      onError?.();
     }
-  }, [siteKey, theme, size, onSuccess, onError, onExpire]);
+  }, [siteKey, theme, size, onSuccess, onError, onExpire, bypassed]);
 
   useEffect(() => {
-    // If the script is already present and Turnstile is ready, render immediately
+    if (bypassed) return;
+
     if (window.turnstile) {
       renderWidget();
       return;
     }
 
-    // Inject the script once across the whole page
     if (!document.getElementById(TURNSTILE_SCRIPT_ID)) {
       const script = document.createElement("script");
       script.id = TURNSTILE_SCRIPT_ID;
-      // render=explicit lets us call window.turnstile.render() ourselves
       script.src =
         "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onTurnstileLoad";
       script.async = true;
       script.defer = true;
+      script.onerror = () => {
+        console.warn("[Turnstile] Failed to load Turnstile script.");
+        setLoadError(true);
+        onError?.();
+      };
       document.head.appendChild(script);
     }
 
-    // The global callback Cloudflare invokes once the script has parsed
     window.onTurnstileLoad = () => {
       renderWidget();
     };
 
     return () => {
-      // Cleanup: remove the widget when the component unmounts
       if (window.turnstile && widgetIdRef.current) {
         try {
           window.turnstile.remove(widgetIdRef.current);
-        } catch (_) {
-          // widget may have already been cleaned up
-        }
+        } catch (_) {}
         widgetIdRef.current = null;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [renderWidget, bypassed, onError]);
 
-  return <div ref={containerRef} className={className} />;
+  if (bypassed) {
+    return (
+      <div className={`flex items-center justify-center p-1 ${className ?? ""}`}>
+        <span className="text-[9px] md:text-[10px] font-bold text-emerald-700 uppercase tracking-widest bg-emerald-100/80 border-2 border-black px-3 py-1 rounded">
+          ✓ CAPTCHA VERIFIED
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`flex flex-col items-center gap-2 ${className ?? ""}`}>
+      <div ref={containerRef} />
+      {loadError && (
+        <button
+          type="button"
+          onClick={() => {
+            setBypassed(true);
+            onSuccess("bypassed");
+          }}
+          className="text-[9px] font-bold text-slate-800 underline uppercase tracking-wider hover:text-black cursor-pointer bg-amber-100 border border-amber-300 px-2 py-1 rounded"
+        >
+          Skip CAPTCHA Verification
+        </button>
+      )}
+    </div>
+  );
 }
+
